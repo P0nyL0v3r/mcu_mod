@@ -4,10 +4,20 @@
  */
 
 /*Include START****************************************************/
-#include "mod.h"
+#include <mcu_mod/mcu_mod.h>
 #include "string.h"
 #include "assert.h"
 /*Include END******************************************************/
+
+/*check core type*/
+#include "main.h"
+#if	defined(STM32F4)
+	#include "core_cm4.h"
+#elif defined(STM32F7) || defined(STM32H7)
+	#include "core_cm7.h"
+#else
+	#error "undefined core"
+#endif
 
 #if USE_FREERTOS == 1
 
@@ -143,17 +153,19 @@
 #endif
 
 #if USE_SPEED_TEST == 1
-	#define RESET_CYCLE_COUNTER()  do { \
-			CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk; \
-			__DSB(); DWT->LAR = 0xC5ACCE55; __DSB(); \
-			DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk; \
-			DWT->CYCCNT = 0; \
-			DWT->CTRL = DWT_CTRL_CYCCNTENA_Msk; \
-		}while(0)
-	#define GET_CYCLE_COUNTER(x)                x=DWT->CYCCNT;
 	void speed_test_start() {
 		dbg(INFO"speed test start");
-		RESET_CYCLE_COUNTER();
+	#if __CORTEX_M	== 7
+		CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;
+		__DSB(); DWT->LAR = 0xC5ACCE55; __DSB();
+		DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk;
+		DWT->CYCCNT = 0;
+		DWT->CTRL = DWT_CTRL_CYCCNTENA_Msk;
+	#else
+		CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+		DWT->CYCCNT = 0;
+		DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+	#endif
 	}
 	void speed_test_stop() {
 		dbg(INFO"speed:%lu(us)",DWT->CYCCNT/(SystemCoreClock / 1000000));

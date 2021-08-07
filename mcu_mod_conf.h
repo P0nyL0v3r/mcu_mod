@@ -1,14 +1,18 @@
 /*
- * mod_conf.h
+ * mcu_mod_conf.h
  *      Author: Alekseev Aleksei
  * Description:
  */
-#ifndef MOD_CONF_H_
-#define MOD_CONF_H_
+#ifndef MCU_MOD_CONF_H_
+#define MCU_MOD_CONF_H_
 
 //интерфейс отладки
 #ifndef USE_DBG
-	#define		USE_DBG			0
+	#define		USE_DBG			1
+#endif
+
+#if USE_DBG == 1 && !defined DBG_ITF_UART
+#error "must to define debug uart DBG_ITF_UART"
 #endif
 
 //использование rtos API
@@ -26,4 +30,4 @@
 	#define		USE_SPEED_TEST	0
 #endif
 
-#endif /*MOD_CONF_H_*/
+#endif /*MCU_MOD_CONF_H_*/

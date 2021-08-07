@@ -1,22 +1,34 @@
 /*
- * mod.h
+ * mcu_mod.h
  *      Author: Alekseev Aleksei
  * Description:
  */
-#ifndef MOD_H_
-#define MOD_H_
+#ifndef MCU_MOD_H_
+#define MCU_MOD_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if USE_FREERTOS == 1
+#include "conf.h"
+#include <mcu_mod/mcu_mod_conf.h>
 
+/* Настройки для удобной отладки
+ * включаем нормальную работу отладчика и
+ * отлючаем собачку в debug режиме*/
+#define EN_DEBUG_CORTEX_CM7()	do{	\
+	  DBGMCU->APB1FZ = 0xFFFFFFFF;	\
+	  DBGMCU->APB2FZ = 0xFFFFFFFF;	\
+	  __HAL_DBGMCU_FREEZE_IWDG();	\
+}while()
+
+#if USE_FREERTOS == 1
 	#include "FreeRTOS.h"
 	#include "task.h"
 	#include "queue.h"
 	#include "semphr.h"
-	#include "cmsis_os2.h"
+
+	#include "cmsis_os.h"
 
 	/*Диспетчер ресурсов*/
 	#if configGENERATE_RUN_TIME_STATS == 1
@@ -110,4 +122,4 @@ extern "C" {
 }
 #endif
 
-#endif /* MOD_H_ */
+#endif /*MCU_MOD_H_ */
