@@ -47,11 +47,11 @@ extern "C" {
 			#define RUNTIME_TIMER htim7
 		* Добавить инкрементирование счетчика в обработчике таймера
 			void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-			{
-			  if (htim->Instance == RUNTIME_TIMER) {
+			{...
+			  if (htim->Instance == RUNTIME_TIMER.Instance) {
 				  ulHighFrequencyTimerTicks++;
 			  }
-			}
+			...}
 */
 	#endif
 	
@@ -70,6 +70,14 @@ extern "C" {
 	void _free( void* p);
 	void * _malloc( size_t xSize );
 	void * _realloc(void * ptr, size_t osize,size_t nsize);
+
+	/*задержки
+	 * стандартный portTICK_PERIOD_MS не корректно работает, когда квант
+	 * времени < 1ms. Для этого добавляю свой расчет для задержки*/
+#define stick(s)   ((float)s /(1./(float)configTICK_RATE_HZ))
+#define mstick(ms) ((float)ms/(1000./(float)configTICK_RATE_HZ))
+#define ustick(us) ((float)us/(1000000./(float)configTICK_RATE_HZ))
+
 #endif
 
 #if USE_DBG == 1
