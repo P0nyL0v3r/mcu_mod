@@ -4,7 +4,7 @@
  */
 
 /*Include START****************************************************/
-#include <mcu_mod/mcu_mod.h>
+#include <mcu_mod.h>
 #include "string.h"
 #include "assert.h"
 /*Include END******************************************************/
@@ -150,7 +150,89 @@
 	void _putchar(char ch) {
 		__io_putchar(ch);
 	}
+
+	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
+	    __disable_irq();//отключаем прерывания, что бы ничего не вызывалось
+	    int i = 0, j = 0;
+	    for(;;i++) {
+	    	if(i == 0) {
+	    		assert_attract_attention();
+	        	if(j%50 == 0)printf(TERM_RED "ASSERT file: %s\r\n line: %d\r\n code: %s\r\n func: %s\r\n" TERM_RESET, filename, line, expr, assert_func);//пишем в консольку
+	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
+	    		i = -1;
+	    		j++;
+	    	}
+	    }
+	}
+
+	void usage_fault_handler(uint32_t CFSRValue) {
+	   dbg("Usage fault: ");
+	   //CFSRValue >>= 16;                  // right shift to lsb
+	   if((CFSRValue & (1 << SCB_CFSR_DIVBYZERO_Pos)) != 0) {
+		   dbg("Divide by zero");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_UNALIGNED_Pos)) != 0) {
+		   dbg("Unaligned access");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_NOCP_Pos)) != 0) {
+		   dbg("No coprocessor");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_INVPC_Pos)) != 0) {
+		   dbg("Invalid PC load");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_INVSTATE_Pos)) != 0) {
+		   dbg("Invalid state");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_UNDEFINSTR_Pos)) != 0) {
+		   dbg("Undefined instruction");
+	   }
+	}
+
+	void bus_fault_handler(uint32_t CFSRValue) {
+		dbg("Bus fault: ");
+	   //CFSRValue >>= 8;                  // right shift to lsb
+	   if((CFSRValue & (1 << SCB_CFSR_IMPRECISERR_Pos)) != 0) {
+		   dbg("Imprecise data bus error");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_PRECISERR_Pos)) != 0) {
+		   dbg("Precise data bus error");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_IBUSERR_Pos)) != 0) {
+		   dbg("Instruction bus error");
+	   }
+	}
+
+	void mem_fault_handler(uint32_t CFSRValue) {
+		dbg("Memory management fault: ");
+	   //CFSRValue >>= 0;                  // right shift to lsb
+	   if((CFSRValue & (1 << SCB_CFSR_DACCVIOL_Pos)) != 0) {
+		   dbg("Data access violation");
+	   }
+	   else if((CFSRValue & (1 << SCB_CFSR_IACCVIOL_Pos)) != 0) {
+		   dbg("Instruction access violation");
+	   }
+	}
+	void hard_fault_handler() {
+		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
+		static char msg[80];
+		dbg(ERR"In Hard Fault Handler");
+		sprintf(msg, "SCB->HFSR = 0x%08x", SCB->HFSR);
+		dbg(msg);
+	    if((SCB->CFSR & 0xFFFF0000) != 0) {
+	    	usage_fault_handler(SCB->CFSR);
+	    }
+	    if((SCB->CFSR & 0x0000FF00) != 0) {
+	    	bus_fault_handler(SCB->CFSR);
+	    }
+	    if((SCB->CFSR & 0x000000FF) != 0) {
+	    	mem_fault_handler(SCB->CFSR);
+	    }
+	    assert(0);
+	}
+
 #endif
+
+
 
 #if USE_SPEED_TEST == 1
 	void speed_test_start() {

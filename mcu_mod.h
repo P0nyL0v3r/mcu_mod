@@ -11,7 +11,8 @@ extern "C" {
 #endif
 
 #include "conf.h"
-#include <mcu_mod/mcu_mod_conf.h>
+#include <mcu_mod_conf.h>
+
 
 /* Настройки для удобной отладки
  * включаем нормальную работу отладчика и
@@ -67,6 +68,7 @@ extern "C" {
 		void * realloc(void * ptr, size_t xSize) {assert(0);}
 */
 	void *pvPortAddElem(void * ptr,size_t one_elem_size, size_t elem_count);
+
 	void _free( void* p);
 	void * _malloc( size_t xSize );
 	void * _realloc(void * ptr, size_t osize,size_t nsize);
@@ -74,13 +76,14 @@ extern "C" {
 	/*задержки
 	 * стандартный portTICK_PERIOD_MS не корректно работает, когда квант
 	 * времени < 1ms. Для этого добавляю свой расчет для задержки*/
-#define stick(s)   ((float)s /(1./(float)configTICK_RATE_HZ))
-#define mstick(ms) ((float)ms/(1000./(float)configTICK_RATE_HZ))
-#define ustick(us) ((float)us/(1000000./(float)configTICK_RATE_HZ))
-
+	#define stick(s)   ((float)s /(1./(float)configTICK_RATE_HZ))
+	#define mstick(ms) ((float)ms/(1000./(float)configTICK_RATE_HZ))
+	#define ustick(us) ((float)us/(1000000./(float)configTICK_RATE_HZ))
 #endif
 
 #if USE_DBG == 1
+
+	#define ENT_DBG_STAT()	__ASM volatile("BKPT #01")
 
 	//теги для отладки
 	#define TERM_GREEN		"\033[0;32m"
@@ -99,6 +102,15 @@ extern "C" {
 
 	int __io_putchar(int ch);
 	void _putchar(char ch);
+
+	//функция для привлечения внимания(помиргать светодиодом и т.д.) при входе в assert
+#ifndef assert_attract_attention
+	#define assert_attract_attention(...)
+#endif
+
+	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr );
+
+	void hard_fault_handler();
 
 #else
 	#define  dbg( ... )
