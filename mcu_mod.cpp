@@ -11,16 +11,19 @@
 
 /*check core type*/
 #include "main.h"
-#if	defined(STM32F4)
+#if	defined STM32F4
 	#include "core_cm4.h"
-#elif defined(STM32F7) || defined(STM32H7)
+#elif defined STM32F7
 	#include "core_cm7.h"
+#elif defined STM32H7
+	#include "core_cm7.h"
+	#include "stm32h7xx.h"
+	#include "stm32h7xx_hal.h"
 #else
 	#error "undefined core"
 #endif
 
 #if USE_FREERTOS == 1
-
 	#if configGENERATE_RUN_TIME_STATS == 1
 		#include "tim.h"
 		volatile unsigned long ulHighFrequencyTimerTicks = 0;
@@ -70,7 +73,16 @@
 	void _free( void* p) {
 		vPortFree(p);
 	}
-	void * _realloc(void * ptr, size_t osize,size_t nsize) {
+	void * _realloc(void * ptr, size_t size) {
+		//вообще я не очень уверен начсет этого, но увидел в одном очень
+		//большом и важном приложении, поэтому буду надеяться,
+		//что проблем с этим не будет
+		void * new_ptr = pvPortMalloc(size);
+		memcpy(new_ptr,ptr,size);
+		vPortFree(ptr);
+		return new_ptr;
+	}
+	void * _old_realloc(void * ptr, size_t osize,size_t nsize) {
 	   if (nsize == 0) {
 		   vPortFree(ptr);
 		  return NULL;
@@ -114,25 +126,19 @@
 			static uint32_t us_tick = SystemCoreClock / 1000000;
 			uint32_t wait = delay * us_tick;
 		/* Add a freq to guarantee minimum wait */
-			if (wait < 0xFFFFFFFFU)
-			{
+			if (wait < 0xFFFFFFFFU)	{
 				wait += (uint32_t)(us_tick);
 			}
-			while ((DWT->CYCCNT - tickstart) < wait)
-			{
-			}
+			while ((DWT->CYCCNT - tickstart) < wait){}
 		#else
 		//Подразумевается, что таймер инкрементируется каждую микросекунду
-		//FIXME: При использовании определить таймер
-		#define TIM_CNT //TIM*->CNT
-			uint32_t tickstart = TIM_CNT;
+			uint32_t tickstart = TIM_US->CNT;
 			uint32_t wait = delay;
 		/* Add a freq to guarantee minimum wait */
 			if (wait < 0xFFFFU)	{
 				wait += (uint32_t)(1);
 			}
-			while ((TIM_CNT - tickstart) < wait){}
-		#undef TIM_CNT
+			while ((TIM_US->CNT - tickstart) < wait){}
 		#endif
 	}
 #endif
@@ -144,20 +150,46 @@
 	#ifdef ITM
 		ITM_SendChar(ch);
 	#endif
+	#ifdef DBG_ITF_UART
 		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+	#endif
 		return(ch);
 	}
 	void _putchar(char ch) {
 		__io_putchar(ch);
 	}
 
+	void en_dbg() {
+	#if defined STM32F4
+		DBGMCU->APB1FZ = 0xFFFFFFFF;
+		DBGMCU->APB2FZ = 0xFFFFFFFF;
+	#endif
+	}
+
+	#if USE_SPEED_TEST == 1
+		void speed_test_start() {
+			dbg(INFO"speed test start");
+			//https://stackoverflow.com/questions/36378280/stm32-how-to-enable-dwt-cycle-counter
+			CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;//enable trace
+		#if __CORTEX_M	== (7U)
+			__DSB(); DWT->LAR = 0xC5ACCE55; __DSB();//added unlock access to DWT (ITM, etc.)registers
+			DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk;//disable DWT cycle counter
+		#endif
+			DWT->CYCCNT = 0;//clear DWT cycle counter
+			DWT->CTRL = DWT_CTRL_CYCCNTENA_Msk;//enable DWT cycle counter
+
+		}
+		void speed_test_stop() {
+			dbg(INFO"speed:%lu(us)",DWT->CYCCNT/(SystemCoreClock / 1000000));
+		}
+	#endif
+
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
 	    __disable_irq();//отключаем прерывания, что бы ничего не вызывалось
 	    int i = 0, j = 0;
 	    for(;;i++) {
 	    	if(i == 0) {
-	    		assert_attract_attention();
-	        	if(j%50 == 0)printf(TERM_RED "ASSERT file: %s\r\n line: %d\r\n code: %s\r\n func: %s\r\n" TERM_RESET, filename, line, expr, assert_func);//пишем в консольку
+	        	if(j%50 == 0) {dbg(TERM_RED "ASSERT file: %s\r\n line: %d\r\n code: %s\r\n func: %s\r\n" TERM_RESET, filename, line, expr, assert_func);}//пишем в консольку
 	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 	    		i = -1;
 	    		j++;
@@ -213,10 +245,11 @@
 	   }
 	}
 	void hard_fault_handler() {
+//		ENT_DBG_STAT();
 		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
 		static char msg[80];
 		dbg(ERR"In Hard Fault Handler");
-		sprintf(msg, "SCB->HFSR = 0x%08x", SCB->HFSR);
+		sprintf(msg, "SCB->HFSR = 0x%08x", (uint)SCB->HFSR);
 		dbg(msg);
 	    if((SCB->CFSR & 0xFFFF0000) != 0) {
 	    	usage_fault_handler(SCB->CFSR);
@@ -231,26 +264,3 @@
 	}
 
 #endif
-
-
-
-#if USE_SPEED_TEST == 1
-	void speed_test_start() {
-		dbg(INFO"speed test start");
-	#if __CORTEX_M	== 7
-		CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;
-		__DSB(); DWT->LAR = 0xC5ACCE55; __DSB();
-		DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk;
-		DWT->CYCCNT = 0;
-		DWT->CTRL = DWT_CTRL_CYCCNTENA_Msk;
-	#else
-		CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-		DWT->CYCCNT = 0;
-		DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-	#endif
-	}
-	void speed_test_stop() {
-		dbg(INFO"speed:%lu(us)",DWT->CYCCNT/(SystemCoreClock / 1000000));
-	}
-#endif
-
