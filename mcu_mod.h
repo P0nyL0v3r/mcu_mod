@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+#include "conf.h"
 #include <mcu_mod_conf.h>
 
 #if USE_FREERTOS == 1
@@ -62,14 +63,10 @@ extern "C" {
 	void _putchar(char ch);
 
 	//функция для привлечения внимания(помиргать светодиодом и т.д.) при входе в assert
-	#ifndef assert_attract_attention
-		#define assert_attract_attention(...)	__ASM volatile("nop")
-	#endif
+    void assert_attention();
 
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr );
 
-	//обработчик hard fault
-	void hard_fault_handler();
 	//включить режим отладки
 	void en_dbg();
 
@@ -80,7 +77,12 @@ extern "C" {
 #else
 	#define  dbg( ... )
 	#define  en_dbg( ... )
+	#define  speed_test_start()
+	#define	speed_test_stop()
 #endif
+
+	//обработчик hard fault
+	void hard_fault_handler();
 
 #if USE_DELAY_US == 1
 	void delay_us(uint16_t);

@@ -6,8 +6,6 @@
 #ifndef MCU_MOD_CONF_H_
 #define MCU_MOD_CONF_H_
 
-#include "conf.h"
-
 //интерфейс отладки
 #ifndef USE_DBG
 	#define		USE_DBG			0
@@ -21,12 +19,16 @@
 	#define		USE_SPEED_TEST	0
 #endif
 
-//us задержка
+/*
+ * us задержка
+ */
 #ifndef USE_DELAY_US
 	#define		USE_DELAY_US	0
 #endif
 
-//использование таймера для us задержки
+/*
+ * использование таймера для us задержки
+ */
 #if USE_DELAY_US == 1 && !defined DWT && !defined TIM_US
 	#error "определи микросекундный таймер для задержки"
 #endif
@@ -68,8 +70,41 @@
 		  }
 		...}
 */
-#if configGENERATE_RUN_TIME_STATS == 1 && !defined RUNTIME_TIMER
-	#error "must to define freertos runtime stat timer"
+#if USE_FREERTOS == 1 && configGENERATE_RUN_TIME_STATS != 1
+	#warning "загрузка выполнения задач не отслеживается"
 #endif
+
+/*
+ * Отслеживание использования стека задач
+ * Список дел:
+ 	 * Установить параметр:
+ 	 	 configRECORD_STACK_HIGH_ADDRESS	1
+ */
+#if USE_FREERTOS == 1 && configRECORD_STACK_HIGH_ADDRESS != 1
+	#warning "стек задач не отслеживается"
+#endif
+
+/*
+ * Перехват переполнения стека
+ * Список дел:
+ 	 * Установить параметр:
+ 	 	 configRECORD_STACK_HIGH_ADDRESS	1
+ 	 * Объявить функцию void vApplicationStackOverflowHook(void) {}
+ */
+#if USE_FREERTOS == 1 && configCHECK_FOR_STACK_OVERFLOW != 1
+	#warning "переполнение стека не перехвачивается"
+#endif
+
+/*
+ * Перехват нехватки кучи
+ * Список дел:
+ 	 * Установить параметр:
+ 	 	 configUSE_MALLOC_FAILED_HOOK	1
+ 	 * Объявить функцию void vApplicationMallocFailedHook(void) {}
+ */
+#if USE_FREERTOS == 1 && configUSE_MALLOC_FAILED_HOOK != 1
+	#warning "Нехватка кучи не перехвачивается"
+#endif
+
 
 #endif /*MCU_MOD_CONF_H_*/

@@ -13,12 +13,16 @@
 #include "main.h"
 #if	defined STM32F4
 	#include "core_cm4.h"
+	#include "stm32f4xx.h"
 #elif defined STM32F7
 	#include "core_cm7.h"
+	#include "stm32f7xx.h"
+#elif defined STM32G0
+	#include "core_cm0plus.h"
+	#include "stm32g0xx.h"
 #elif defined STM32H7
 	#include "core_cm7.h"
 	#include "stm32h7xx.h"
-	#include "stm32h7xx_hal.h"
 #else
 	#error "undefined core"
 #endif
@@ -180,16 +184,51 @@
 
 		}
 		void speed_test_stop() {
-			dbg(INFO"speed:%lu(us)",DWT->CYCCNT/(SystemCoreClock / 1000000));
+			uint32_t clk = DWT->CYCCNT;
+			uint32_t us = clk/(SystemCoreClock/1000000);
+			uint32_t ms = us/1000;
+			uint32_t val;
+
+			char * suf = NULL;
+
+			if(clk < SystemCoreClock/100000) {
+				suf = (char*)"clk";
+				val = clk;
+			} else if (us < 10000) {
+				suf = (char*)"us";
+				val = us;
+			} else {
+				suf = (char*)"ms";
+				val = ms;
+			}
+			dbg(INFO"speed:%lu %s",val,suf);
 		}
 	#endif
 
+	__weak void assert_attention() {
+		dbg(ERR"attention");
+	}
+
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
+		//привлекаем внимание
+		assert_attention();
 	    __disable_irq();//отключаем прерывания, что бы ничего не вызывалось
 	    int i = 0, j = 0;
 	    for(;;i++) {
 	    	if(i == 0) {
-	        	if(j%50 == 0) {dbg(TERM_RED "ASSERT file: %s\r\n line: %d\r\n code: %s\r\n func: %s\r\n" TERM_RESET, filename, line, expr, assert_func);}//пишем в консольку
+	        	if(j%50 == 0) {
+	        		//пишем в консольку
+	        		dbg(TERM_RED);
+	        		dbg("ASSERT file: %s",filename);
+	        		dbg("line: %d",line);
+	        		dbg("code: %s",expr);
+	        		dbg("func: %s",assert_func);
+					#if USE_FREERTOS == 1
+						char * task_name = pcTaskGetName(NULL);
+						dbg("task: %s",task_name!=NULL?task_name:(char*)"none");
+					#endif
+					dbg(TERM_RESET);
+	        	}
 	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 	    		i = -1;
 	    		j++;
@@ -260,7 +299,7 @@
 	    if((SCB->CFSR & 0x000000FF) != 0) {
 	    	mem_fault_handler(SCB->CFSR);
 	    }
-	    assert(0);
+	    assert("hard fault");
 	}
 
 #endif
