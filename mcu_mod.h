@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include "conf.h"
 #include <mcu_mod_conf.h>
 
 #if USE_FREERTOS == 1
@@ -70,19 +69,21 @@ extern "C" {
 	//включить режим отладки
 	void en_dbg();
 
+	//обработчик hard fault
+	void hard_fault_handler();
+
 	#if USE_SPEED_TEST == 1
 		void speed_test_start();
 		void speed_test_stop();
 	#endif
 #else
+	#define ENT_DBG_STAT()
 	#define  dbg( ... )
 	#define  en_dbg( ... )
 	#define  speed_test_start()
 	#define	speed_test_stop()
+	#define hard_fault_handler()
 #endif
-
-	//обработчик hard fault
-	void hard_fault_handler();
 
 #if USE_DELAY_US == 1
 	void delay_us(uint16_t);

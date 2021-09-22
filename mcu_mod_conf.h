@@ -6,6 +6,8 @@
 #ifndef MCU_MOD_CONF_H_
 #define MCU_MOD_CONF_H_
 
+#include "conf.h"
+
 //интерфейс отладки
 #ifndef USE_DBG
 	#define		USE_DBG			0
@@ -24,13 +26,6 @@
  */
 #ifndef USE_DELAY_US
 	#define		USE_DELAY_US	0
-#endif
-
-/*
- * использование таймера для us задержки
- */
-#if USE_DELAY_US == 1 && !defined DWT && !defined TIM_US
-	#error "определи микросекундный таймер для задержки"
 #endif
 
 /* использование rtos API

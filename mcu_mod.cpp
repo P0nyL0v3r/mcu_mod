@@ -125,7 +125,7 @@
 
 #if USE_DELAY_US == 1
 	void delay_us(uint16_t delay) {
-		#ifdef DWT
+		#if !defined(TIM_US) && defined(DWT)
 			uint32_t tickstart = DWT->CYCCNT;
 			static uint32_t us_tick = SystemCoreClock / 1000000;
 			uint32_t wait = delay * us_tick;
@@ -134,7 +134,7 @@
 				wait += (uint32_t)(us_tick);
 			}
 			while ((DWT->CYCCNT - tickstart) < wait){}
-		#else
+		#elif defined(TIM_US)
 		//Подразумевается, что таймер инкрементируется каждую микросекунду
 			uint32_t tickstart = TIM_US->CNT;
 			uint32_t wait = delay;
@@ -143,6 +143,8 @@
 				wait += (uint32_t)(1);
 			}
 			while ((TIM_US->CNT - tickstart) < wait){}
+		#else
+			#error "must to define us timer"
 		#endif
 	}
 #endif
