@@ -23,6 +23,9 @@
 #elif defined STM32H7
 	#include "core_cm7.h"
 	#include "stm32h7xx.h"
+#elif defined STM32G4
+	#include "core_cm4.h"
+	#include "stm32g4xx.h"
 #else
 	#error "undefined core"
 #endif
@@ -165,6 +168,19 @@
 		__io_putchar(ch);
 	}
 
+	 int _write(int file, char *ptr, int len)	{
+	#ifdef ITM
+		int DataIdx;
+		for (DataIdx = 0; DataIdx < len; DataIdx++)	{
+			ITM_SendChar(ptr[DataIdx]);
+		}
+	#endif
+	#ifdef DBG_ITF_UART
+		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+	#endif
+		return len;
+	}
+
 	void en_dbg() {
 	#if defined STM32F4
 		DBGMCU->APB1FZ = 0xFFFFFFFF;
@@ -286,7 +302,6 @@
 	   }
 	}
 	void hard_fault_handler() {
-//		ENT_DBG_STAT();
 		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
 		static char msg[80];
 		dbg(ERR"In Hard Fault Handler");

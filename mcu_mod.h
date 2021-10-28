@@ -58,6 +58,7 @@ extern "C" {
 	#define dbg_endl()		printf("\r\n")
 	#define dbg( args ... ) printf(args); dbg_endl()
 
+	int _write(int file, char *ptr, int len);
 	int __io_putchar(int ch);
 	void _putchar(char ch);
 
@@ -77,12 +78,13 @@ extern "C" {
 		void speed_test_stop();
 	#endif
 #else
-	#define ENT_DBG_STAT()
-	#define  dbg( ... )
-	#define  en_dbg( ... )
-	#define  speed_test_start()
-	#define	speed_test_stop()
-	#define hard_fault_handler()
+	#define ENT_DBG_STAT()			__NOP()
+	#define dbg_endl()				__NOP()
+	#define  dbg( ... )				__NOP()
+	#define  en_dbg( ... )			__NOP()
+	#define  speed_test_start()		__NOP()
+	#define	speed_test_stop()		__NOP()
+	#define hard_fault_handler()	__NOP()
 #endif
 
 #if USE_DELAY_US == 1

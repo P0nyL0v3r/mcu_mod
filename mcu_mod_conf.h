@@ -42,11 +42,13 @@
 #ifndef USE_FREERTOS
 	#define		USE_FREERTOS	0
 #endif
-
+#if USE_FREERTOS == 1
+	#include "FreeRTOSConfig.h"
+#endif
 
 /* Проверка времени выполнение задач
  * Список дел:
-	* При смене прошивки преобразовать переменную(в случае использования оптимизации):
+	* При смене прошивки преобразовать переменную(в случае использования оптимизации -oSize):
 		ulTotalRunTime -> volatile ulTotalRunTime
 	* Установить в FreeRTOSConfig.h:
 		#define configGENERATE_RUN_TIME_STATS            1
