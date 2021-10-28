@@ -76,3 +76,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 Пример реализации кода есть на github:
 
 https://github.com/bartslinger/solar_module_f3/tree/b6843d6f7e75d336eacd3aacae1f4d017883914a
+
+### Debug support for timers, RTC, watchdog, BxCAN and I2C
+
+Для отладки с периферией, требовательной к временным задержкам можно замораживать эту периферию, уточнение на 5.1:
+
+https://www.st.com/resource/en/application_note/dm00354244-stm32-microcontroller-debug-toolbox-stmicroelectronics.pdf#page=51
+

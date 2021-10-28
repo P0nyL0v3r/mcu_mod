@@ -88,7 +88,7 @@
  	 	 configRECORD_STACK_HIGH_ADDRESS	1
  	 * Объявить функцию void vApplicationStackOverflowHook(void) {}
  */
-#if USE_FREERTOS == 1 && configCHECK_FOR_STACK_OVERFLOW != 1
+#if USE_FREERTOS == 1 && configCHECK_FOR_STACK_OVERFLOW == 0
 	#warning "переполнение стека не перехвачивается"
 #endif
 

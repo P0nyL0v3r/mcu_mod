@@ -155,38 +155,22 @@
 
 #if USE_DBG == 1
 	#include "usart.h"
-	int __io_putchar(int ch) {
-	#ifdef ITM
-		ITM_SendChar(ch);
-	#endif
-	#ifdef DBG_ITF_UART
-		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-	#endif
-		return(ch);
-	}
-	void _putchar(char ch) {
-		__io_putchar(ch);
-	}
-
-	 int _write(int file, char *ptr, int len)	{
+	static inline int dbg_write(char * data, int len) {
 	#ifdef ITM
 		int DataIdx;
 		for (DataIdx = 0; DataIdx < len; DataIdx++)	{
-			ITM_SendChar(ptr[DataIdx]);
+			ITM_SendChar(data[DataIdx]);
 		}
 	#endif
 	#ifdef DBG_ITF_UART
-		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)data, len, HAL_MAX_DELAY);
 	#endif
 		return len;
 	}
 
-	void en_dbg() {
-	#if defined STM32F4
-		DBGMCU->APB1FZ = 0xFFFFFFFF;
-		DBGMCU->APB2FZ = 0xFFFFFFFF;
-	#endif
-	}
+	int __io_putchar(int ch) {dbg_write((char *)&ch,1);return(ch);}
+	void _putchar(char ch) {dbg_write(&ch,1);}
+	int _write(int file, char *ptr, int len)	{return dbg_write(ptr,len);}
 
 	#if USE_SPEED_TEST == 1
 		void speed_test_start() {

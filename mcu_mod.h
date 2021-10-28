@@ -56,19 +56,17 @@ extern "C" {
 
 	#include "stdio.h"
 	#define dbg_endl()		printf("\r\n")
-	#define dbg( args ... ) printf(args); dbg_endl()
+	#define _dbg( args ... ) printf(args)
+	#define dbg( args ... )	_dbg(args); dbg_endl()
 
 	int _write(int file, char *ptr, int len);
 	int __io_putchar(int ch);
 	void _putchar(char ch);
 
-	//функция для привлечения внимания(помиргать светодиодом и т.д.) при входе в assert
+	//функция для привлечения внимания(помиргать светодиодом и т.д.) перед входом в assert
     void assert_attention();
 
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr );
-
-	//включить режим отладки
-	void en_dbg();
 
 	//обработчик hard fault
 	void hard_fault_handler();
@@ -81,7 +79,6 @@ extern "C" {
 	#define ENT_DBG_STAT()			__NOP()
 	#define dbg_endl()				__NOP()
 	#define  dbg( ... )				__NOP()
-	#define  en_dbg( ... )			__NOP()
 	#define  speed_test_start()		__NOP()
 	#define	speed_test_stop()		__NOP()
 	#define hard_fault_handler()	__NOP()
