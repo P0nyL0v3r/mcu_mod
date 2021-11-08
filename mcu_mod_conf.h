@@ -28,16 +28,19 @@
 	#define		USE_DELAY_US	0
 #endif
 
+/*
+ * Использование маленькой printf библиотеки
+ */
+#ifndef USE_CUSTOM_STDIO
+	#define USE_CUSTOM_STDIO	0
+#endif
+
 /* использование rtos API
  * Список дел:
-		* В ходе работы было замечено, что если функция malloc определена
-			здесь, то не все части программы её могут использовать ->
-			некоторые участки кода будут использовать newlib malloc.
-			что бы это предотвратить следует вписать следующие строчки
-			в main.c :
-		void * malloc(size_t xSize) {return _malloc(xSize);}
-		void free(void * p) {_free(p);}
-		void * realloc(void * ptr, size_t xSize) {return _realloc(ptr,xSize);}
+		* Указать линкеру, использовать обертки:
+		-Wl,--wrap=malloc
+		-Wl,--wrap=free
+		-Wl,--wrap=realloc
 */
 #ifndef USE_FREERTOS
 	#define		USE_FREERTOS	0

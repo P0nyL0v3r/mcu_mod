@@ -10,7 +10,8 @@
 extern "C" {
 #endif
 
-#include <mcu_mod_conf.h>
+#include "mcu_mod_conf.h"
+#include "conf.h"
 
 #if USE_FREERTOS == 1
 	#include "FreeRTOS.h"
@@ -27,9 +28,9 @@ extern "C" {
 	
 	/*Управление кучей*/
 	void *pvPortAddElem(void * ptr,size_t one_elem_size, size_t elem_count);
-	void _free( void* p);
-	void * _malloc( size_t xSize );
-	void * _realloc(void * ptr, size_t size);
+	void __wrap_free( void* p);
+	void * __wrap_malloc( size_t xSize );
+	void * __wrap_realloc(void * ptr, size_t size);
 	void * _old_realloc(void * ptr, size_t osize,size_t nsize);
 
 	/*задержки
@@ -38,30 +39,53 @@ extern "C" {
 	#define stick(s)   ((float)s /(1./(float)configTICK_RATE_HZ))
 	#define mstick(ms) ((float)ms/(1000./(float)configTICK_RATE_HZ))
 	#define ustick(us) ((float)us/(1000000./(float)configTICK_RATE_HZ))
+
+	typedef enum {
+	  rtosPriorityIdle         = tskIDLE_PRIORITY,          ///< priority: idle (lowest)
+	  rtosPriorityLow          ,          ///< priority: low
+	  rtosPriorityBelowNormal  ,          ///< priority: below normal
+	  rtosPriorityNormal       ,          ///< priority: normal (default)
+	  rtosPriorityAboveNormal  ,          ///< priority: above normal
+	  rtosPriorityHigh         ,          ///< priority: high
+	  rtosPriorityRealtime     = configMAX_PRIORITIES -1,          ///< priority: realtime (highest)
+	}rtosPrio;
 #endif
 
 #if USE_DBG == 1
 	#define ENT_DBG_STAT()	__ASM volatile("BKPT #01")
 
 	//теги для отладки
+
+	#define TERM_RED		"\033[1;31m"
 	#define TERM_GREEN		"\033[0;32m"
 	#define TERM_YELLOW		"\033[0;33m"
-	#define TERM_RED		"\033[1;31m"
+	#define TERM_BLUE		"\033[0;34m"
 	#define TERM_RESET		"\033[0;0m"
 
-	#define INFO			TERM_GREEN "[INFO]" TERM_RESET " "
+	#define SUCC			TERM_GREEN "[SUCC]" TERM_RESET " "
+	#define INFO			TERM_BLUE "[INFO]" TERM_RESET " "
 	#define WARN			TERM_YELLOW "[WARN]"  TERM_RESET " "
 	#define ERR				TERM_RED "[ERR]"  TERM_RESET " "
 	#define GLOB			"[GLOBAL] "
 
+
+#if USE_CUSTOM_STDIO	== 1
+	#include "printf.h"
+	#define dbg_endl()
+	#define dbg_puts()
+	#define dbg_printf( ... )
+	#define dbg_printf_el( ... )
+	void _putchar(char ch);
+#else
 	#include "stdio.h"
-	#define dbg_endl()		printf("\r\n")
-	#define _dbg( args ... ) printf(args)
-	#define dbg( args ... )	_dbg(args); dbg_endl()
+	#define dbg_endl()					puts("\r\n")
+	#define dbg_puts(str)				puts(str);puts("\r")
+	#define dbg_printf(args ... )		printf(args)
+	#define dbg_printf_el(args ... )	printf(args);puts("\r\n")
+#endif
 
 	int _write(int file, char *ptr, int len);
 	int __io_putchar(int ch);
-	void _putchar(char ch);
 
 	//функция для привлечения внимания(помиргать светодиодом и т.д.) перед входом в assert
     void assert_attention();
@@ -76,10 +100,13 @@ extern "C" {
 		void speed_test_stop();
 	#endif
 #else
+	#define dbg_endl()
+	#define dbg_puts()
+	#define dbg_printf( ... )
+	#define dbg_printf_el( ... )
+
 	#define ENT_DBG_STAT()			__NOP()
-	#define dbg_endl()				__NOP()
-	#define  dbg( ... )				__NOP()
-	#define  speed_test_start()		__NOP()
+	#define speed_test_start()		__NOP()
 	#define	speed_test_stop()		__NOP()
 	#define hard_fault_handler()	__NOP()
 #endif

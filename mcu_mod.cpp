@@ -74,13 +74,13 @@
 			assert(0);
 		}
 	#endif
-	void * _malloc( size_t xSize ) {
+	void * __wrap_malloc( size_t xSize ) {
 		return pvPortMalloc( xSize );
 	}
-	void _free( void* p) {
+	void __wrap_free( void* p) {
 		vPortFree(p);
 	}
-	void * _realloc(void * ptr, size_t size) {
+	void * __wrap_realloc(void * ptr, size_t size) {
 		//вообще я не очень уверен начсет этого, но увидел в одном очень
 		//большом и важном приложении, поэтому буду надеяться,
 		//что проблем с этим не будет
@@ -163,18 +163,27 @@
 		}
 	#endif
 	#ifdef DBG_ITF_UART
-		HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)data, len, HAL_MAX_DELAY);
+		/* Для упрощения алгоримта передачи примитивы ОС не используются.
+		 * Вместо этого применяемя активное ожидание, но проверяем, находимся ли
+		 * мы в прерывании.
+		 */
+		HAL_StatusTypeDef stat;
+		do {
+			stat = HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)data, len, HAL_MAX_DELAY);
+		} while(stat != HAL_OK && __get_IPSR() == 0);
 	#endif
 		return len;
 	}
 
 	int __io_putchar(int ch) {dbg_write((char *)&ch,1);return(ch);}
-	void _putchar(char ch) {dbg_write(&ch,1);}
 	int _write(int file, char *ptr, int len)	{return dbg_write(ptr,len);}
+	#if USE_CUSTOM_STDIO == 1
+		void _putchar(char ch) {dbg_write(&ch,1);}
+	#endif
 
 	#if USE_SPEED_TEST == 1
 		void speed_test_start() {
-			dbg(INFO"speed test start");
+			dbg_puts(INFO"speed test start");
 			//https://stackoverflow.com/questions/36378280/stm32-how-to-enable-dwt-cycle-counter
 			CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;//enable trace
 		#if __CORTEX_M	== (7U)
@@ -203,12 +212,12 @@
 				suf = (char*)"ms";
 				val = ms;
 			}
-			dbg(INFO"speed:%lu %s",val,suf);
+			dbg_printf_el(INFO"speed:%lu %s",val,suf);
 		}
 	#endif
 
 	__weak void assert_attention() {
-		dbg(ERR"attention");
+		dbg_puts(ERR"attention");
 	}
 
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
@@ -220,16 +229,16 @@
 	    	if(i == 0) {
 	        	if(j%50 == 0) {
 	        		//пишем в консольку
-	        		dbg(TERM_RED);
-	        		dbg("ASSERT file: %s",filename);
-	        		dbg("line: %d",line);
-	        		dbg("code: %s",expr);
-	        		dbg("func: %s",assert_func);
+	        		dbg_puts(TERM_RED);
+	        		dbg_puts("ASSERT file:");dbg_puts(filename);
+	        		dbg_printf_el("line: %d",line);
+	        		dbg_puts("code:");dbg_puts(expr);
+	        		dbg_puts("func:");dbg_puts(assert_func);
 					#if USE_FREERTOS == 1
 						char * task_name = pcTaskGetName(NULL);
-						dbg("task: %s",task_name!=NULL?task_name:(char*)"none");
+						dbg_puts("task:");dbg_puts(task_name!=NULL?task_name:(char*)"none");
 					#endif
-					dbg(TERM_RESET);
+					dbg_puts(TERM_RESET);
 	        	}
 	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 	    		i = -1;
@@ -237,60 +246,59 @@
 	    	}
 	    }
 	}
-
 	void usage_fault_handler(uint32_t CFSRValue) {
-	   dbg("Usage fault: ");
+		dbg_puts("Usage fault: ");
 	   //CFSRValue >>= 16;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_DIVBYZERO_Pos)) != 0) {
-		   dbg("Divide by zero");
+		   dbg_puts("Divide by zero");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_UNALIGNED_Pos)) != 0) {
-		   dbg("Unaligned access");
+		   dbg_puts("Unaligned access");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_NOCP_Pos)) != 0) {
-		   dbg("No coprocessor");
+		   dbg_puts("No coprocessor");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_INVPC_Pos)) != 0) {
-		   dbg("Invalid PC load");
+		   dbg_puts("Invalid PC load");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_INVSTATE_Pos)) != 0) {
-		   dbg("Invalid state");
+		   dbg_puts("Invalid state");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_UNDEFINSTR_Pos)) != 0) {
-		   dbg("Undefined instruction");
+		   dbg_puts("Undefined instruction");
 	   }
 	}
 
 	void bus_fault_handler(uint32_t CFSRValue) {
-		dbg("Bus fault: ");
+		dbg_puts("Bus fault: ");
 	   //CFSRValue >>= 8;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_IMPRECISERR_Pos)) != 0) {
-		   dbg("Imprecise data bus error");
+		   dbg_puts("Imprecise data bus error");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_PRECISERR_Pos)) != 0) {
-		   dbg("Precise data bus error");
+		   dbg_puts("Precise data bus error");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_IBUSERR_Pos)) != 0) {
-		   dbg("Instruction bus error");
+		   dbg_puts("Instruction bus error");
 	   }
 	}
 
 	void mem_fault_handler(uint32_t CFSRValue) {
-		dbg("Memory management fault: ");
+		dbg_puts("Memory management fault: ");
 	   //CFSRValue >>= 0;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_DACCVIOL_Pos)) != 0) {
-		   dbg("Data access violation");
+		   dbg_puts("Data access violation");
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_IACCVIOL_Pos)) != 0) {
-		   dbg("Instruction access violation");
+		   dbg_puts("Instruction access violation");
 	   }
 	}
 	void hard_fault_handler() {
 		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
 		static char msg[80];
-		dbg(ERR"In Hard Fault Handler");
-		sprintf(msg, "SCB->HFSR = 0x%08x", (uint)SCB->HFSR);
-		dbg(msg);
+		dbg_puts(ERR"In Hard Fault Handler");
+		sprintf(msg, "SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
+		dbg_puts(msg);
 	    if((SCB->CFSR & 0xFFFF0000) != 0) {
 	    	usage_fault_handler(SCB->CFSR);
 	    }
@@ -302,5 +310,6 @@
 	    }
 	    assert("hard fault");
 	}
-
+#else
+	void _putchar(char ch) {(void)ch;}
 #endif
