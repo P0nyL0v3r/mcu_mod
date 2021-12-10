@@ -36,7 +36,12 @@
 		volatile unsigned long ulHighFrequencyTimerTicks = 0;
 		void configureTimerForRunTimeStats(void)
 		{
-			HAL_TIM_Base_Start_IT(&RUNTIME_TIMER);
+#if defined RUNTIME_TIMER_HAL
+			HAL_TIM_Base_Start_IT(&RUNTIME_TIMER_HAL);
+#elif defined RUNTIME_TIMER_LL
+			LL_TIM_EnableIT_UPDATE(RUNTIME_TIMER_LL);
+			LL_TIM_EnableCounter(RUNTIME_TIMER_LL);
+#endif
 		}
 		unsigned long getRunTimeCounterValue(void)
 		{
@@ -154,32 +159,43 @@
 
 
 #if USE_DBG == 1
+#if defined DBG_ITF_UART_HAL || defined DBG_ITF_UART_LL
 	#include "usart.h"
-	static inline int dbg_write(char * data, int len) {
-	#ifdef ITM
+#endif
+	int dbg_write(char * data, int len) {
+	#if defined ITM
 		int DataIdx;
 		for (DataIdx = 0; DataIdx < len; DataIdx++)	{
 			ITM_SendChar(data[DataIdx]);
 		}
 	#endif
-	#ifdef DBG_ITF_UART
+	#if defined(DBG_ITF_UART_HAL)
 		/* Для упрощения алгоримта передачи примитивы ОС не используются.
 		 * Вместо этого применяемя активное ожидание, но проверяем, находимся ли
 		 * мы в прерывании.
 		 */
 		HAL_StatusTypeDef stat;
 		do {
-			stat = HAL_UART_Transmit(&DBG_ITF_UART, (uint8_t*)data, len, HAL_MAX_DELAY);
+			stat = HAL_UART_Transmit(&DBG_ITF_UART_HAL, (uint8_t*)data, len, HAL_MAX_DELAY);
 		} while(stat != HAL_OK && __get_IPSR() == 0);
+	#elif defined(DBG_ITF_UART_LL)
+		for(int i = 0; i < len;) {
+			if(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)) {
+			  __disable_irq();
+			  while(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)){
+				  LL_LPUART_TransmitData8(DBG_ITF_UART_LL, data[i]);
+				  i++;
+			  }
+			  __enable_irq();
+			}
+		}
+
 	#endif
 		return len;
 	}
 
 	int __io_putchar(int ch) {dbg_write((char *)&ch,1);return(ch);}
 	int _write(int file, char *ptr, int len)	{return dbg_write(ptr,len);}
-	#if USE_CUSTOM_STDIO == 1
-		void _putchar(char ch) {dbg_write(&ch,1);}
-	#endif
 
 	#if USE_SPEED_TEST == 1
 		void speed_test_start() {
@@ -230,14 +246,22 @@
 	        	if(j%50 == 0) {
 	        		//пишем в консольку
 	        		dbg_puts(TERM_RED);
-	        		dbg_puts("ASSERT file:");dbg_puts(filename);
+
+//	        		dbg_puts("ASSERT file:");dbg_puts(filename);
+	        		dbg_printf_el("ASSERT file: %s",filename);
+
 	        		dbg_printf_el("line: %d",line);
-	        		dbg_puts("code:");dbg_puts(expr);
+
+//	        		dbg_puts("code:");dbg_puts(expr);
+	        		dbg_printf_el("code: %s",expr);
+
 	        		dbg_puts("func:");dbg_puts(assert_func);
-					#if USE_FREERTOS == 1
-						char * task_name = pcTaskGetName(NULL);
-						dbg_puts("task:");dbg_puts(task_name!=NULL?task_name:(char*)"none");
-					#endif
+	        		dbg_printf_el("func: %s", assert_func);
+
+//					#if USE_FREERTOS == 1
+//						char * task_name = pcTaskGetName(NULL);
+//						dbg_puts("task:");dbg_puts(task_name!=NULL?task_name:(char*)"none");
+//					#endif
 					dbg_puts(TERM_RESET);
 	        	}
 	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
@@ -295,10 +319,11 @@
 	}
 	void hard_fault_handler() {
 		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
-		static char msg[80];
 		dbg_puts(ERR"In Hard Fault Handler");
-		sprintf(msg, "SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
-		dbg_puts(msg);
+		dbg_printf_el(ERR"SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
+		if(SCB->HFSR & 0x80000000) {
+			dbg_puts(ERR"debug event");
+		}
 	    if((SCB->CFSR & 0xFFFF0000) != 0) {
 	    	usage_fault_handler(SCB->CFSR);
 	    }

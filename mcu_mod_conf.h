@@ -60,20 +60,35 @@
 	* Добавить в FreeRTOSConfig.h
 		#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS configureTimerForRunTimeStats
 		#define portGET_RUN_TIME_COUNTER_VALUE getRunTimeCounterValue
-	* Скорректировать определение таймера для счета:
-		#define RUNTIME_TIMER htim7
-	* Добавить инкрементирование счетчика в обработчике таймера
-		void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-		{...
-		  if (htim->Instance == RUNTIME_TIMER.Instance) {
-			  ulHighFrequencyTimerTicks++;
-		  }
-		...}
+	* HAL
+		* #define RUNTIME_TIMER_HAL htim*
+		* Добавить инкрементирование счетчика в обработчике таймера
+			void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+			{...
+			  if (htim->Instance == RUNTIME_TIMER.Instance) {
+				  ulHighFrequencyTimerTicks++;
+			  }
+			...}
+	* LL
+		* #define RUNTIME_TIMER_LL TIM*
+		* Добавить в обработчике прерывания
+		void TIM*_IRQHandler(void)
+		{
+			if(LL_TIM_IsActiveFlag_UPDATE(RUNTIME_TIMER_LL)) {
+				  LL_TIM_ClearFlag_UPDATE(RUNTIME_TIMER_LL);
+				  ulHighFrequencyTimerTicks++;
+			} else {
+				assert(0 && "undefined tim irq");
+			}
+		}
 */
 #if USE_FREERTOS == 1 && configGENERATE_RUN_TIME_STATS != 1
 	#warning "загрузка выполнения задач не отслеживается"
 #endif
 
+#if configGENERATE_RUN_TIME_STATS == 1 && (!defined RUNTIME_TIMER_HAL && !defined RUNTIME_TIMER_LL )
+	#warning "надо определить таймер"
+#endif
 /*
  * Отслеживание использования стека задач
  * Список дел:

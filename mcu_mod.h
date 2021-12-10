@@ -70,20 +70,18 @@ extern "C" {
 
 
 #if USE_CUSTOM_STDIO	== 1
-	#include "printf.h"
-	#define dbg_endl()
-	#define dbg_puts()
-	#define dbg_printf( ... )
-	#define dbg_printf_el( ... )
-	void _putchar(char ch);
+	#include CUSTOM_STDIO_HEADER
+//	#define dbg_puts()
+//	#define dbg_printf( ... )
+//	#define dbg_printf_el( ... )
 #else
 	#include "stdio.h"
-	#define dbg_endl()					puts("\r\n")
-	#define dbg_puts(str)				puts(str);puts("\r")
+	#define dbg_puts(str)				puts(str);_write(0,"\r",1)
 	#define dbg_printf(args ... )		printf(args)
-	#define dbg_printf_el(args ... )	printf(args);puts("\r\n")
+	#define dbg_printf_el(args ... )	printf(args);_write(0,"\r\n",2)
 #endif
 
+	__attribute__((weak)) int dbg_write(char * data, int len);
 	int _write(int file, char *ptr, int len);
 	int __io_putchar(int ch);
 
@@ -100,7 +98,6 @@ extern "C" {
 		void speed_test_stop();
 	#endif
 #else
-	#define dbg_endl()
 	#define dbg_puts()
 	#define dbg_printf( ... )
 	#define dbg_printf_el( ... )
