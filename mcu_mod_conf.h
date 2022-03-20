@@ -83,11 +83,11 @@
 		}
 */
 #if USE_FREERTOS == 1 && configGENERATE_RUN_TIME_STATS != 1
-	#warning "загрузка выполнения задач не отслеживается"
+	#pragma message "configGENERATE_RUN_TIME_STATS == 0"
 #endif
 
 #if configGENERATE_RUN_TIME_STATS == 1 && (!defined RUNTIME_TIMER_HAL && !defined RUNTIME_TIMER_LL )
-	#warning "надо определить таймер"
+	#warning "define run time stats"
 #endif
 /*
  * Отслеживание использования стека задач
@@ -96,7 +96,7 @@
  	 	 configRECORD_STACK_HIGH_ADDRESS	1
  */
 #if USE_FREERTOS == 1 && configRECORD_STACK_HIGH_ADDRESS != 1
-	#warning "стек задач не отслеживается"
+	#pragma message "configRECORD_STACK_HIGH_ADDRESS == 0"
 #endif
 
 /*
@@ -107,7 +107,7 @@
  	 * Объявить функцию void vApplicationStackOverflowHook(void) {}
  */
 #if USE_FREERTOS == 1 && configCHECK_FOR_STACK_OVERFLOW == 0
-	#warning "переполнение стека не перехвачивается"
+	#pragma message "configCHECK_FOR_STACK_OVERFLOW == 0"
 #endif
 
 /*
@@ -118,7 +118,7 @@
  	 * Объявить функцию void vApplicationMallocFailedHook(void) {}
  */
 #if USE_FREERTOS == 1 && configUSE_MALLOC_FAILED_HOOK != 1
-	#warning "Нехватка кучи не перехвачивается"
+	#pragma message "configUSE_MALLOC_FAILED_HOOK == 0"
 #endif
 
 

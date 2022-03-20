@@ -69,17 +69,8 @@ extern "C" {
 	#define GLOB			"[GLOBAL] "
 
 
-#if USE_CUSTOM_STDIO	== 1
-	#include CUSTOM_STDIO_HEADER
-//	#define dbg_puts()
-//	#define dbg_printf( ... )
-//	#define dbg_printf_el( ... )
-#else
-	#include "stdio.h"
-	#define dbg_puts(str)				puts(str);_write(0,"\r",1)
-	#define dbg_printf(args ... )		printf(args)
-	#define dbg_printf_el(args ... )	printf(args);_write(0,"\r\n",2)
-#endif
+	int	dbg(const char *format, ...);
+	int	dbg_el(const char *format, ...);
 
 	__attribute__((weak)) int dbg_write(char * data, int len);
 	int _write(int file, char *ptr, int len);

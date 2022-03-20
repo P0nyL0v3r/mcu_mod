@@ -7,6 +7,8 @@
 #include <mcu_mod.h>
 #include "string.h"
 #include "assert.h"
+#include "stdio.h"
+#include "stdarg.h"
 /*Include END******************************************************/
 
 /*check core type*/
@@ -162,6 +164,46 @@
 #if defined DBG_ITF_UART_HAL || defined DBG_ITF_UART_LL
 	#include "usart.h"
 #endif
+
+	int	dbg (const char *format, ...) {
+#if USE_FREERTOS == 1
+		portENTER_CRITICAL();
+#endif
+	    int stat;
+	    va_list args;
+	    va_start(args, format);
+
+	    stat = vprintf(format, args);
+
+	    va_end(args);
+
+#if USE_FREERTOS == 1
+		portEXIT_CRITICAL();
+#endif
+		return stat;
+	}
+
+	int	dbg_el (const char *format, ...) {
+#if USE_FREERTOS == 1
+		portENTER_CRITICAL();
+#endif
+	    int stat;
+	    va_list args;
+	    va_start(args, format);
+
+		stat = vprintf(format, args);
+
+	    va_end(args);
+
+	    dbg("\r\n");
+
+#if USE_FREERTOS == 1
+		portEXIT_CRITICAL();
+#endif
+		return stat;
+	}
+
+
 	int dbg_write(char * data, int len) {
 	#if defined ITM
 		int DataIdx;
@@ -181,12 +223,10 @@
 	#elif defined(DBG_ITF_UART_LL)
 		for(int i = 0; i < len;) {
 			if(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)) {
-			  __disable_irq();
 			  while(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)){
 				  LL_LPUART_TransmitData8(DBG_ITF_UART_LL, data[i]);
 				  i++;
 			  }
-			  __enable_irq();
 			}
 		}
 
@@ -194,8 +234,12 @@
 		return len;
 	}
 
-	int __io_putchar(int ch) {dbg_write((char *)&ch,1);return(ch);}
-	int _write(int file, char *ptr, int len)	{return dbg_write(ptr,len);}
+	int __io_putchar(int ch) {
+		dbg_write((char *)&ch,1);return(ch);
+	}
+	int _write(int file, char *ptr, int len)	{
+		return dbg_write(ptr,len);
+	}
 
 	#if USE_SPEED_TEST == 1
 		void speed_test_start() {
@@ -233,7 +277,7 @@
 	#endif
 
 	__weak void assert_attention() {
-		dbg_puts(ERR"attention");
+		dbg_el(ERR"attention");
 	}
 
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
@@ -245,24 +289,17 @@
 	    	if(i == 0) {
 	        	if(j%50 == 0) {
 	        		//пишем в консольку
-	        		dbg_puts(TERM_RED);
+	        		dbg(TERM_RED);
 
-//	        		dbg_puts("ASSERT file:");dbg_puts(filename);
-	        		dbg_printf_el("ASSERT file: %s",filename);
+	        		dbg_el("ASSERT file: %s",filename);
 
-	        		dbg_printf_el("line: %d",line);
+	        		dbg_el("line: %d",line);
 
-//	        		dbg_puts("code:");dbg_puts(expr);
-	        		dbg_printf_el("code: %s",expr);
+	        		dbg_el("code: %s",expr);
 
-	        		dbg_puts("func:");dbg_puts(assert_func);
-	        		dbg_printf_el("func: %s", assert_func);
+	        		dbg_el("func: %s",assert_func);
 
-//					#if USE_FREERTOS == 1
-//						char * task_name = pcTaskGetName(NULL);
-//						dbg_puts("task:");dbg_puts(task_name!=NULL?task_name:(char*)"none");
-//					#endif
-					dbg_puts(TERM_RESET);
+	        		dbg(TERM_RESET);
 	        	}
 	    	} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 	    		i = -1;
@@ -271,58 +308,67 @@
 	    }
 	}
 	void usage_fault_handler(uint32_t CFSRValue) {
-		dbg_puts("Usage fault: ");
+		char * type;
 	   //CFSRValue >>= 16;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_DIVBYZERO_Pos)) != 0) {
-		   dbg_puts("Divide by zero");
+		   type = (char*)"Divide by zero";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_UNALIGNED_Pos)) != 0) {
-		   dbg_puts("Unaligned access");
+		   type = (char*)"Unaligned access";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_NOCP_Pos)) != 0) {
-		   dbg_puts("No coprocessor");
+		   type = (char*)"No coprocessor";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_INVPC_Pos)) != 0) {
-		   dbg_puts("Invalid PC load");
+		   type = (char*)"Invalid PC load";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_INVSTATE_Pos)) != 0) {
-		   dbg_puts("Invalid state");
+		   type = (char*)"Invalid state";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_UNDEFINSTR_Pos)) != 0) {
-		   dbg_puts("Undefined instruction");
+		   type = (char*)"Undefined instruction";
+	   } else {
+		   type = (char*)"undefined";
 	   }
+		dbg_el("Usage fault: %s",type);
 	}
 
 	void bus_fault_handler(uint32_t CFSRValue) {
-		dbg_puts("Bus fault: ");
+		char * type;
 	   //CFSRValue >>= 8;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_IMPRECISERR_Pos)) != 0) {
-		   dbg_puts("Imprecise data bus error");
+		   type = (char*)"Imprecise data bus error";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_PRECISERR_Pos)) != 0) {
-		   dbg_puts("Precise data bus error");
+		   type = (char*)"Precise data bus error";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_IBUSERR_Pos)) != 0) {
-		   dbg_puts("Instruction bus error");
+		   type = (char*)"Instruction bus error";
+	   } else {
+		   type = (char*)"undefined";
 	   }
+		dbg_el("Bus fault: %s",type);
 	}
 
 	void mem_fault_handler(uint32_t CFSRValue) {
-		dbg_puts("Memory management fault: ");
+		char * type;
 	   //CFSRValue >>= 0;                  // right shift to lsb
 	   if((CFSRValue & (1 << SCB_CFSR_DACCVIOL_Pos)) != 0) {
-		   dbg_puts("Data access violation");
+		   type = (char*)"Data access violation";
 	   }
 	   else if((CFSRValue & (1 << SCB_CFSR_IACCVIOL_Pos)) != 0) {
-		   dbg_puts("Instruction access violation");
+		   type = (char*)"Instruction access violation";
+	   } else {
+		   type = (char*)"undefined";
 	   }
+		dbg_el("Memory management fault: %s",type);
 	}
 	void hard_fault_handler() {
 		//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
-		dbg_puts(ERR"In Hard Fault Handler");
-		dbg_printf_el(ERR"SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
+		dbg_el(ERR"In Hard Fault Handler");
+		dbg_el(ERR"SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
 		if(SCB->HFSR & 0x80000000) {
-			dbg_puts(ERR"debug event");
+			dbg_el(ERR"debug event");
 		}
 	    if((SCB->CFSR & 0xFFFF0000) != 0) {
 	    	usage_fault_handler(SCB->CFSR);
