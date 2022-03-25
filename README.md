@@ -1,33 +1,38 @@
 # mcu_mod
 
-mcu_mod - библиотека для оптимизации процесса разработки. Включает в себя модули общего назначения.
+library that simplifies the deployment of the STM32 project
 
-##### USE_DBG
+## mcu_mod_dbg 
 
-* Перенаправляет стандартный вывод сообщений (printf/puts/...) в отладочные интерфейсы(ITF/UART) 
+* output of messages to the serial port
+* changed assert message format
+* added hard fault handler with output type of fault
 
-##### USE_FREERTOS
+## mcu_mod_rtos 
 
-* Переопределяет стандартные вызовы, делая их совместимыми с кучей FreeRtos'a
+* integrating the RTOS into system calls
+* enumed priorities
 
-## tips_and_tricks
+## tips and tricks
 
 т.к. библиотека встраивается во все файлы, неплохо было бы записывать здесь все типсы и триксы для облегчения процесса разработки.
 
-### Оптимизация
+library was created for simplify programming, that's why it's will by nice to add some implicit information about STM32.
+
+### optimization
 
 ```c++
-/*установить параметр оптимизации для отдельно взятой функции*/
+/*optimization parameter for single function*/
 __attribute__((optimize("-Ofast"))) void func(void) {}
 ```
 
-### АЦП
+### ADC
 
-#### Режимы
+#### Modes
 
-* начало преобразований от таймера и запись значений каналов в память через DMA
+##### starting conversions by timer and writing channels value by DMA
 
-настроить DMA канал:
+config DMA channel:
 
 ```c++
 ...
@@ -37,9 +42,9 @@ HAL_NVIC_SetPriority(DMA*_Stream*_IRQn, 0, 0);
 HAL_NVIC_EnableIRQ(DMA*_Stream*_IRQn);
 ```
 
-настроить АЦП:
+config ADC:
 
-!Включать прерывания АЦП не обязательно. Окончание передачи обрабатывается прерыванием DMA 
+!Enabling ADC IRQ is not needed. End up of conversion is handling by DMA. 
 
 ```c++
   ...
@@ -47,25 +52,25 @@ HAL_NVIC_EnableIRQ(DMA*_Stream*_IRQn);
   hadc.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   ...
   hadc.Init.ContinuousConvMode = DISABLE;
-  hadc.Init.NbrOfConversion = *кол-во каналов*;
+  hadc.Init.NbrOfConversion = *channels num*;
   hadc.Init.DiscontinuousConvMode = DISABLE;
-  hadc.Init.ExternalTrigConv = *источник запроса*;
+  hadc.Init.ExternalTrigConv = *req source*;
   hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
   hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   ...
 ```
 
-Включить АЦП и источник запроса:
+Enable ADC and event source:
 
-! Включать прерывания таймера не обязательно. Достаточно обновления события таймера.
+! Enabling ADC IRQ is not needed. Timer update event is enough.
 
 ```c++
   HAL_ADC_Start_DMA(&hadc, adc_data, ADC_CHAN_CNT);
   HAL_TIM_Base_Start(&htim);
 ```
 
-Данные можно снимать с переопределяемой функции:
+Data can be read from callback:
 
 ```c++
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) 
@@ -73,7 +78,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 
 АЦП будет сам перезаписывать данные.  Добавлять HAL_ADC_Start_DMA в обработчики прерываний не надо.
 
-Пример реализации кода есть на github:
+example on github:
 
 https://github.com/bartslinger/solar_module_f3/tree/b6843d6f7e75d336eacd3aacae1f4d017883914a
 
