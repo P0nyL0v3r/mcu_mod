@@ -12,7 +12,7 @@ extern "C" {
 
 #include "mcu_mod_conf.h"
 
-#include "mcu_mod_dbg.h"
+#include <mcu_mod_log.h>
 #include "mcu_mod_rtos.h"
 
 

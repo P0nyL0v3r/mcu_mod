@@ -2,7 +2,7 @@
 
 library that simplifies the deployment of the STM32 project
 
-## mcu_mod_dbg 
+## mcu_mod_log 
 
 * output of messages to the serial port
 * changed assert message format
@@ -14,8 +14,6 @@ library that simplifies the deployment of the STM32 project
 * enumed priorities
 
 ## tips and tricks
-
-т.к. библиотека встраивается во все файлы, неплохо было бы записывать здесь все типсы и триксы для облегчения процесса разработки.
 
 library was created for simplify programming, that's why it's will by nice to add some implicit information about STM32.
 
@@ -76,7 +74,7 @@ Data can be read from callback:
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) 
 ```
 
-АЦП будет сам перезаписывать данные.  Добавлять HAL_ADC_Start_DMA в обработчики прерываний не надо.
+АЦП будет сам перезаписывать данные.  Add HAL_ADC_Start_DMA in callbacks isn't necessary.
 
 example on github:
 

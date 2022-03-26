@@ -8,15 +8,17 @@
 
 //use debug
 //what to do:
-//	*	define debug interface
-#define		USE_DBG			0
-//#define 	DBG_ITF_UART_HAL huart*
-//#define 	DBG_ITF_UART_LL	 UART*
+//	*	define log interface
+#define		USE_LOG			0
+#define 	LOG_MIN_LEVEL   LOG_DEBUG
+#define 	LOG_EL			"\r\n"
+//#define 	LOG_UART 		USART1
+
 
 
 //use code execution speed test
 //what to do:
-//set USE_DBG 1
+//set USE_LOG 1
 #define		USE_SPEED_TEST	0
 
 //us delay

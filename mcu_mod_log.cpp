@@ -2,9 +2,7 @@
  *      Author: Alekseev A.R.
  */
 
-#include "mcu_mod_dbg.h"
-
-/*check core type*/
+#include <mcu_mod_log.h>
 #include "main.h"
 
 #if	defined STM32F4
@@ -26,21 +24,62 @@
 	#error "undefined core"
 #endif
 
-#if USE_DBG == 1
+#if USE_LOG == 1
 
 #include "string.h"
 #include "assert.h"
 #include "stdio.h"
 #include "stdarg.h"
 
-#if defined DBG_ITF_UART_HAL || defined DBG_ITF_UART_LL
-#include "usart.h"
+static const char * log_level_string[] = {
+	"[TRACE]" " ",
+	TERM_BLUE "[DEBUG]" TERM_RESET " ",
+	TERM_GREEN "[INFO]" TERM_RESET " ",
+	TERM_YELLOW "[WARN]"  TERM_RESET " ",
+	TERM_RED "[ERR]"  TERM_RESET " "
+};
+
+#if USE_FREERTOS == 1
+
+static SemaphoreHandle_t log_mut;//xSemaphoreCreateMutex()
+
+static int inIRQ (void)
+{
+  return __get_IPSR() != 0;
+}
+
 #endif
 
-int	dbg (const char *format, ...) {
+void log_lock() {
 #if USE_FREERTOS == 1
-	portENTER_CRITICAL();
+	if(inIRQ()){
+		return;
+	} else {
+		if(log_mut == NULL) {
+			portENTER_CRITICAL();
+			if(log_mut == NULL)
+				log_mut = xSemaphoreCreateRecursiveMutex();
+			portEXIT_CRITICAL();
+		}
+		xSemaphoreTakeRecursive(log_mut,portMAX_DELAY);
+	}
 #endif
+}
+
+void log_unlock() {
+#if USE_FREERTOS == 1
+	if(inIRQ()){
+		return;
+	} else {
+		xSemaphoreGiveRecursive(log_mut);
+	}
+#endif
+}
+
+int	log_printf (const char *format, ...) {
+
+	log_lock();
+
 	int stat;
 	va_list args;
 	va_start(args, format);
@@ -49,16 +88,20 @@ int	dbg (const char *format, ...) {
 
 	va_end(args);
 
-#if USE_FREERTOS == 1
-	portEXIT_CRITICAL();
-#endif
+	log_unlock();
+
 	return stat;
 }
 
-int	dbg_el (const char *format, ...) {
-#if USE_FREERTOS == 1
-	portENTER_CRITICAL();
-#endif
+int	log_level(log_level_t level,const char *format, ...) {
+
+	if(level < LOG_MIN_LEVEL)
+		return 0;
+
+	log_lock();
+
+	log_printf(log_level_string[level]);
+
 	int stat;
 	va_list args;
 	va_start(args, format);
@@ -67,16 +110,15 @@ int	dbg_el (const char *format, ...) {
 
 	va_end(args);
 
-	dbg("\r\n");
+	log_printf(LOG_EL);
 
-#if USE_FREERTOS == 1
-	portEXIT_CRITICAL();
-#endif
+	log_unlock();
+
 	return stat;
 }
 
 
-int dbg_write(char * data, int len) {
+int log_write(char * data, int len) {
 
 #if defined ITM
 	int DataIdx;
@@ -85,39 +127,28 @@ int dbg_write(char * data, int len) {
 	}
 #endif
 
-#if defined(DBG_ITF_UART_HAL)
-
-	HAL_StatusTypeDef stat;
-	do {
-		stat = HAL_UART_Transmit(&DBG_ITF_UART_HAL, (uint8_t*)data, len, HAL_MAX_DELAY);
-	} while(stat != HAL_OK && __get_IPSR() == 0);
-
-#elif defined(DBG_ITF_UART_LL)
-
+#if defined(LOG_UART)
 	for(int i = 0; i < len;) {
-		if(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)) {
-		  while(LL_LPUART_IsActiveFlag_TXE(DBG_ITF_UART_LL)){
-			  LL_LPUART_TransmitData8(DBG_ITF_UART_LL, data[i]);
-			  i++;
-		  }
+		while(READ_BIT(LOG_UART->SR,USART_SR_TXE)) {
+			WRITE_REG(LOG_UART->DR,data[i++]);
 		}
 	}
-
 #endif
+
 	return len;
 }
 
 int __io_putchar(int ch) {
-	dbg_write((char *)&ch,1);return(ch);
+	log_write((char *)&ch,1);return(ch);
 }
 
 int _write(int file, char *ptr, int len)	{
-	return dbg_write(ptr,len);
+	return log_write(ptr,len);
 }
 
 #if USE_SPEED_TEST == 1
 	void speed_test_start() {
-		dbg_el(INFO"speed test start");
+		log_debug("speed test start");
 		//https://stackoverflow.com/questions/36378280/stm32-how-to-enable-dwt-cycle-counter
 		CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;//enable trace
 	#if __CORTEX_M	== (7U)
@@ -146,12 +177,12 @@ int _write(int file, char *ptr, int len)	{
 			suf = (char*)"ms";
 			val = ms;
 		}
-		dbg_el(INFO"speed:%lu %s",val,suf);
+		log_debug("speed:%lu %s",val,suf);
 	}
 #endif
 
 __weak void assert_attention() {
-	dbg_el(ERR"attention");
+	log_err("attention");
 }
 
 void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
@@ -163,17 +194,17 @@ void __assert_func( const char *filename, int line, const char *assert_func, con
 		if(i == 0) {
 			if(j%50 == 0) {
 				//пишем в консольку
-				dbg(TERM_RED);
+				log_printf(TERM_RED);
 
-				dbg_el("ASSERT file: %s",filename);
+				log_printf("ASSERT file: %s",filename);
 
-				dbg_el("line: %d",line);
+				log_printf("line: %d",line);
 
-				dbg_el("code: %s",expr);
+				log_printf("code: %s",expr);
 
-				dbg_el("func: %s",assert_func);
+				log_printf("func: %s",assert_func);
 
-				dbg(TERM_RESET);
+				log_printf(TERM_RESET);
 			}
 		} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 			i = -1;
@@ -205,7 +236,7 @@ void usage_fault_handler(uint32_t CFSRValue) {
    } else {
 	   type = (char*)"undefined";
    }
-	dbg_el("Usage fault: %s",type);
+   log_err("Usage fault: %s",type);
 }
 
 void bus_fault_handler(uint32_t CFSRValue) {
@@ -222,7 +253,7 @@ void bus_fault_handler(uint32_t CFSRValue) {
    } else {
 	   type = (char*)"undefined";
    }
-	dbg_el("Bus fault: %s",type);
+   log_err("Bus fault: %s",type);
 }
 
 void mem_fault_handler(uint32_t CFSRValue) {
@@ -236,15 +267,15 @@ void mem_fault_handler(uint32_t CFSRValue) {
    } else {
 	   type = (char*)"undefined";
    }
-	dbg_el("Memory management fault: %s",type);
+   log_err("Memory management fault: %s",type);
 }
 
 void hard_fault_handler() {
 	//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
-	dbg_el(ERR"In Hard Fault Handler");
-	dbg_el(ERR"SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
+	log_err("In Hard Fault Handler");
+	log_err("SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
 	if(SCB->HFSR & 0x80000000) {
-		dbg_el(ERR"debug event");
+		log_err("debug event");
 	}
 	if((SCB->CFSR & 0xFFFF0000) != 0) {
 		usage_fault_handler(SCB->CFSR);
