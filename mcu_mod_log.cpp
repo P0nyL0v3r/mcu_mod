@@ -129,9 +129,16 @@ int log_write(char * data, int len) {
 
 #if defined(LOG_UART)
 	for(int i = 0; i < len;) {
+#if defined(STM32H7) || defined(STM32G4)
+		while(READ_BIT(LOG_UART->ISR,USART_ISR_TXE_TXFNF)) {
+			WRITE_REG(LOG_UART->TDR,data[i++]);
+		}
+#else
 		while(READ_BIT(LOG_UART->SR,USART_SR_TXE)) {
 			WRITE_REG(LOG_UART->DR,data[i++]);
 		}
+#endif
+
 	}
 #endif
 

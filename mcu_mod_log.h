@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "mcu_mod.h"
+#include "mcu_mod_conf.h"
 
 //colored tag for debug
 #define TERM_RED		"\033[1;31m"
@@ -31,11 +32,11 @@ typedef enum {
 
 	int	log_level(log_level_t level,const char *format, ...);
 
-	#define log_trace(...)	log_level(LOG_TRACE, __VA_ARGS__)
-	#define log_debug(...)	log_level(LOG_DEBUG, __VA_ARGS__)
-	#define log_info(...)	log_level(LOG_INFO, __VA_ARGS__)
-	#define log_warn(...)	log_level(LOG_WARN, __VA_ARGS__)
-	#define log_err(...)	log_level(LOG_ERR, __VA_ARGS__)
+	#define log_trace(fmt, ...)	log_level(LOG_TRACE, fmt, ##__VA_ARGS__)
+	#define log_debug(fmt, ...)	log_level(LOG_DEBUG, fmt, ##__VA_ARGS__)
+	#define log_info( fmt, ...)	log_level(LOG_INFO , fmt, ##__VA_ARGS__)
+	#define log_warn( fmt, ...)	log_level(LOG_WARN , fmt, ##__VA_ARGS__)
+	#define log_err(  fmt, ...)	log_level(LOG_ERR  , fmt, ##__VA_ARGS__)
 
 	__attribute__((weak)) int log_write(char * data, int len);
 

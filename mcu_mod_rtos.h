@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "mcu_mod.h"
+#include "mcu_mod_conf.h"
 
 #if USE_FREERTOS == 1
 
@@ -17,26 +18,6 @@ extern "C" {
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-
-//generate run time stats
-#if configGENERATE_RUN_TIME_STATS != 1 && configUSE_TRACE_FACILITY !=1 && configUSE_STATS_FORMATTING_FUNCTIONS != 1
-	#pragma message "configGENERATE_RUN_TIME_STATS"
-#endif
-
-//record stack high address
-#if configRECORD_STACK_HIGH_ADDRESS == 0
-	#pragma message "configRECORD_STACK_HIGH_ADDRESS"
-#endif
-
-//check stack overflow
-#if configCHECK_FOR_STACK_OVERFLOW == 0
-	#pragma message "configCHECK_FOR_STACK_OVERFLOW"
-#endif
-
-//malloc failed hook
-#if configUSE_MALLOC_FAILED_HOOK == 0
-	#pragma message "configUSE_MALLOC_FAILED_HOOK"
-#endif
 
 //runtime counter
 #if configGENERATE_RUN_TIME_STATS == 1
@@ -54,9 +35,9 @@ extern "C" {
 	  rtosPriorityBelowNormal  ,         					///< priority: below normal
 	  rtosPriorityNormal       ,          					///< priority: normal (default)
 	  rtosPriorityAboveNormal  ,          					///< priority: above normal
-  rtosPriorityHigh         ,          						///< priority: high
+	  rtosPriorityHigh         ,          					///< priority: high
 	  rtosPriorityRealtime     = configMAX_PRIORITIES -1,   ///< priority: realtime (highest)
-	}rtosPrio;
+	}rtosPriority_t;
 
 #endif
 
