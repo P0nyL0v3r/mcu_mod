@@ -14,7 +14,13 @@
 #if USE_LOG == 1
 #define 	LOG_MIN_LEVEL   LOG_DEBUG
 #define 	LOG_EL			"\r\n"
-//#define 	LOG_UART 		USART1
+
+#define		LOG_USE_STRM_BUF 	0
+#define 	LOG_STRM_BUF_SIZE	256
+
+#define 	LOG_USE_ITM		0
+
+//#define 	LOG_UART		USART1
 
 //use code execution speed test
 #define		USE_SPEED_TEST	0
@@ -91,7 +97,5 @@
 //		#define configUSE_MALLOC_FAILED_HOOK            1
 //	*	define void vApplicationMallocFailedHook(void) {}
 #endif//#if USE_FREERTOS == 1
-
-
 
 #endif /*MCU_MOD_CONF_H_*/

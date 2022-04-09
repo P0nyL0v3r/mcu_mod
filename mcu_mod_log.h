@@ -28,6 +28,7 @@ typedef enum {
 }log_level_t;
 
 #if USE_LOG == 1
+
 	int	log_printf(const char *format, ...);
 
 	int	log_level(log_level_t level,const char *format, ...);
@@ -41,7 +42,6 @@ typedef enum {
 	__attribute__((weak)) int log_write(char * data, int len);
 
 	int _write(int file, char *ptr, int len);
-	int __io_putchar(int ch);
 
     void assert_attention();
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr );

@@ -18,6 +18,8 @@ extern "C" {
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "message_buffer.h"
+#include "stream_buffer.h"
 
 //runtime counter
 #if configGENERATE_RUN_TIME_STATS == 1

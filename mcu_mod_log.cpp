@@ -25,7 +25,6 @@
 #endif
 
 #if USE_LOG == 1
-
 #include "string.h"
 #include "assert.h"
 #include "stdio.h"
@@ -39,56 +38,97 @@ static const char * log_level_string[] = {
 	TERM_RED "[ERR]"  TERM_RESET " "
 };
 
-#if USE_FREERTOS == 1
-
-static SemaphoreHandle_t log_mut;
-
 static int inIRQ (void)
 {
   return __get_IPSR() != 0;
 }
 
-#endif//#if USE_FREERTOS == 1
+
+#if USE_FREERTOS == 1
+
+void log_lock();
+void log_unlock();
+int log_init();
+
+//для семафора
+bool logInitState = false;
+static SemaphoreHandle_t log_mut;
+
+#if LOG_USE_STRM_BUF == 1
+void log_task(void * arg);
+
+//для кольцевого буфера
+bool logUseStrmBuf = false;
+TaskHandle_t logTaskHandle;
+StreamBufferHandle_t logStrmBuf;
+#endif//#if LOG_USE_STRM_BUF == 1
+
 
 void log_lock() {
-#if USE_FREERTOS == 1
-	if(inIRQ()){
-		return;
-	} else {
-		if(log_mut == NULL) {
-			portENTER_CRITICAL();
-			if(log_mut == NULL)
-				log_mut = xSemaphoreCreateRecursiveMutex();
-			portEXIT_CRITICAL();
+	if(!inIRQ()){
+		if(!logInitState) {
+			log_init();
 		}
 		xSemaphoreTakeRecursive(log_mut,portMAX_DELAY);
 	}
-#endif//#if USE_FREERTOS == 1
 }
 
 void log_unlock() {
-#if USE_FREERTOS == 1
-	if(inIRQ()){
-		return;
-	} else {
+	if(!inIRQ()){
 		xSemaphoreGiveRecursive(log_mut);
 	}
-#endif//#if USE_FREERTOS == 1
 }
+
+int log_init() {
+	portENTER_CRITICAL();
+
+	if(logInitState)
+		return 0;
+
+	log_mut = xSemaphoreCreateRecursiveMutex();
+#if LOG_USE_STRM_BUF == 1
+	xTaskCreate(log_task, (char *)"[LOG]", configMINIMAL_STACK_SIZE,
+			NULL, rtosPriorityLow, &logTaskHandle);
+#endif
+	logInitState = true;
+
+	portEXIT_CRITICAL();
+	return 0;
+}
+
+#if LOG_USE_STRM_BUF == 1
+
+void log_task(void * arg) {
+	logStrmBuf = xStreamBufferCreate(LOG_STRM_BUF_SIZE,1);
+	logUseStrmBuf = true;
+	const int bufSize = 256;
+	char buf[bufSize];
+	size_t size;
+	for(;;) {
+		size = xStreamBufferReceive(logStrmBuf, buf, bufSize, portMAX_DELAY);
+		log_write(buf,size);
+	}
+}
+
+#endif//#if LOG_USE_STRM_BUF == 1
+
+#endif//#if USE_FREERTOS == 1
 
 int	log_printf (const char *format, ...) {
 
+#if USE_FREERTOS == 1
 	log_lock();
+#endif//#if USE_FREERTOS == 1
 
 	int stat;
 	va_list args;
 	va_start(args, format);
-
 	stat = vprintf(format, args);
-
 	va_end(args);
 
+#if USE_FREERTOS == 1
 	log_unlock();
+#endif//#if USE_FREERTOS == 1
 
 	return stat;
 }
@@ -98,59 +138,65 @@ int	log_level(log_level_t level,const char *format, ...) {
 	if(level < LOG_MIN_LEVEL)
 		return 0;
 
+#if USE_FREERTOS == 1
 	log_lock();
+#endif//#if USE_FREERTOS == 1
 
-	log_printf(log_level_string[level]);
+	fputs(log_level_string[level],stdout);
 
 	int stat;
 	va_list args;
 	va_start(args, format);
-
 	stat = vprintf(format, args);
-
 	va_end(args);
 
-	log_printf(LOG_EL);
+	fputs(LOG_EL,stdout);
 
+#if USE_FREERTOS == 1
 	log_unlock();
+#endif//#if USE_FREERTOS == 1
 
 	return stat;
 }
 
-
 int log_write(char * data, int len) {
 
-#if defined ITM
+#if LOG_USE_ITM == 1 && defined(ITM)
+
 	int DataIdx;
 	for (DataIdx = 0; DataIdx < len; DataIdx++)	{
 		ITM_SendChar(data[DataIdx]);
 	}
-#endif//#if defined ITM
+
+#endif//#if LOG_USE_ITM == 1 && defined(ITM)
 
 #if defined(LOG_UART)
+
 	for(int i = 0; i < len;) {
-#if defined(STM32H7) || defined(STM32G4)
+	#if defined(STM32H7) || defined(STM32G4)
 		while(READ_BIT(LOG_UART->ISR,USART_ISR_TXE_TXFNF)) {
 			WRITE_REG(LOG_UART->TDR,data[i++]);
 		}
-#else
+	#else
 		while(READ_BIT(LOG_UART->SR,USART_SR_TXE)) {
 			WRITE_REG(LOG_UART->DR,data[i++]);
 		}
-#endif
-
+	#endif//#if defined(STM32H7) || defined(STM32G4)
 	}
-#endif//#if defined(LOG_UART)
 
+#endif//#if defined(LOG_UART)
 	return len;
 }
 
-int __io_putchar(int ch) {
-	log_write((char *)&ch,1);return(ch);
-}
-
 int _write(int file, char *ptr, int len)	{
-	return log_write(ptr,len);
+	int stat = 0;
+#if LOG_USE_STRM_BUF == 1
+	if(logUseStrmBuf && !inIRQ())
+		stat = xStreamBufferSend( logStrmBuf, ptr, len, portMAX_DELAY );
+	else
+#endif
+		stat = log_write( ptr,len );
+	return stat;
 }
 
 #if USE_SPEED_TEST == 1
