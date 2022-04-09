@@ -41,14 +41,14 @@ static const char * log_level_string[] = {
 
 #if USE_FREERTOS == 1
 
-static SemaphoreHandle_t log_mut;//xSemaphoreCreateMutex()
+static SemaphoreHandle_t log_mut;
 
 static int inIRQ (void)
 {
   return __get_IPSR() != 0;
 }
 
-#endif
+#endif//#if USE_FREERTOS == 1
 
 void log_lock() {
 #if USE_FREERTOS == 1
@@ -63,7 +63,7 @@ void log_lock() {
 		}
 		xSemaphoreTakeRecursive(log_mut,portMAX_DELAY);
 	}
-#endif
+#endif//#if USE_FREERTOS == 1
 }
 
 void log_unlock() {
@@ -73,7 +73,7 @@ void log_unlock() {
 	} else {
 		xSemaphoreGiveRecursive(log_mut);
 	}
-#endif
+#endif//#if USE_FREERTOS == 1
 }
 
 int	log_printf (const char *format, ...) {
@@ -125,7 +125,7 @@ int log_write(char * data, int len) {
 	for (DataIdx = 0; DataIdx < len; DataIdx++)	{
 		ITM_SendChar(data[DataIdx]);
 	}
-#endif
+#endif//#if defined ITM
 
 #if defined(LOG_UART)
 	for(int i = 0; i < len;) {
@@ -140,7 +140,7 @@ int log_write(char * data, int len) {
 #endif
 
 	}
-#endif
+#endif//#if defined(LOG_UART)
 
 	return len;
 }
@@ -186,7 +186,7 @@ int _write(int file, char *ptr, int len)	{
 		}
 		log_debug("speed:%lu %s",val,suf);
 	}
-#endif
+#endif//#if USE_SPEED_TEST == 1
 
 __weak void assert_attention() {
 	log_err("attention");
@@ -201,17 +201,13 @@ void __assert_func( const char *filename, int line, const char *assert_func, con
 		if(i == 0) {
 			if(j%50 == 0) {
 				//пишем в консольку
-				log_printf(TERM_RED);
+				log_err("ASSERT file: %s",filename);
 
-				log_printf("ASSERT file: %s",filename);
+				log_err("line: %d",line);
 
-				log_printf("line: %d",line);
+				log_err("code: %s",expr);
 
-				log_printf("code: %s",expr);
-
-				log_printf("func: %s",assert_func);
-
-				log_printf(TERM_RESET);
+				log_err("func: %s",assert_func);
 			}
 		} else if(i >= (int)(SystemCoreClock/100)) {//типо задержка, только без прерываний
 			i = -1;
@@ -295,7 +291,7 @@ void hard_fault_handler() {
 	}
 	assert("hard fault");
 }
-#endif
+#endif//#if USE_LOG == 1
 
 #if USE_DELAY_US == 1
 void delay_us(uint16_t delay) {

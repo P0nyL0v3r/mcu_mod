@@ -2,13 +2,13 @@
 
 library that simplifies the deployment of the STM32 project
 
-## mcu_mod_log 
+## mcu_mod_log
 
 * output of messages to the serial port
 * changed assert message format
 * added hard fault handler with output type of fault
 
-## mcu_mod_rtos 
+## mcu_mod_rtos
 
 * integrating the RTOS into system calls
 * enumed priorities
@@ -85,4 +85,3 @@ https://github.com/bartslinger/solar_module_f3/tree/b6843d6f7e75d336eacd3aacae1f
 Для отладки с периферией, требовательной к временным задержкам можно замораживать эту периферию, уточнение на 5.1:
 
 https://www.st.com/resource/en/application_note/dm00354244-stm32-microcontroller-debug-toolbox-stmicroelectronics.pdf#page=51
-

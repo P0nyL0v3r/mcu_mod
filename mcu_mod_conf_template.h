@@ -10,19 +10,23 @@
 //what to do:
 //	*	define log interface
 #define		USE_LOG			0
+
+#if USE_LOG == 1
 #define 	LOG_MIN_LEVEL   LOG_DEBUG
 #define 	LOG_EL			"\r\n"
 //#define 	LOG_UART 		USART1
 
-
-
 //use code execution speed test
-//what to do:
-//set USE_LOG 1
 #define		USE_SPEED_TEST	0
+#endif//#if USE_LOG == 1
 
 //us delay
 #define		USE_DELAY_US	0
+
+#if USE_DELAY_US == 1
+//#define TIM_US	TIM1
+#endif
+
 
 // use rtos
 // what to do:
@@ -35,7 +39,6 @@
 
 #if USE_FREERTOS == 1
 	#include "FreeRTOSConfig.h"
-#endif
 
 //run time stat
 // what to do:
@@ -65,11 +68,9 @@
 //			if(LL_TIM_IsActiveFlag_UPDATE(RUNTIME_TIMER_LL)) {
 //				  LL_TIM_ClearFlag_UPDATE(RUNTIME_TIMER_LL);
 //				  ulHighFrequencyTimerTicks++;
-//			} else {
-//				assert(0 && "undefined tim irq");
 //			}
 //		}
-//
+
 //#define RUNTIME_TIMER_HAL htim*
 //#defime RUNTIME_TIMER_LL  TIM*
 
@@ -89,5 +90,8 @@
 //	* set in FreeRTOSConfig.h:
 //		#define configUSE_MALLOC_FAILED_HOOK            1
 //	*	define void vApplicationMallocFailedHook(void) {}
+#endif//#if USE_FREERTOS == 1
+
+
 
 #endif /*MCU_MOD_CONF_H_*/

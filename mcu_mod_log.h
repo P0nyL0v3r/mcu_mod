@@ -55,8 +55,8 @@ typedef enum {
 
 #else
 
-	#define log_printf(...) __NOP()
-	#define log_level(...) __NOP()
+	#define log_printf(...) 		__NOP()
+	#define log_level(...) 			__NOP()
 
 	#define log_trace(...)
 	#define log_debug(...)
