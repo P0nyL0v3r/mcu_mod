@@ -1,8 +1,3 @@
-/*
- * mcu_mod.h
- *      Author: Alekseev Aleksei
- * Description:
- */
 #ifndef MCU_MOD_H_
 #define MCU_MOD_H_
 
@@ -14,7 +9,6 @@ extern "C" {
 
 #include <mcu_mod_log.h>
 #include "mcu_mod_rtos.h"
-
 
 #ifdef __cplusplus
 }

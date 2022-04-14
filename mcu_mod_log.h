@@ -1,7 +1,3 @@
-/*
- *      Author: Alekseev A.R.
- */
-
 #ifndef MCU_MOD_MCU_MOD_LOG_H_
 #define MCU_MOD_MCU_MOD_LOG_H_
 
@@ -27,10 +23,15 @@ typedef enum {
 	LOG_ERR
 }log_level_t;
 
+//! return true, if it called in IRQ
+int inIRQ (void);
+
 #if USE_LOG == 1
 
+	//! message output without endline
 	int	log_printf(const char *format, ...);
 
+	//! message output with level and endline
 	int	log_level(log_level_t level,const char *format, ...);
 
 	#define log_trace(fmt, ...)	log_level(LOG_TRACE, fmt, ##__VA_ARGS__)
@@ -39,18 +40,29 @@ typedef enum {
 	#define log_warn( fmt, ...)	log_level(LOG_WARN , fmt, ##__VA_ARGS__)
 	#define log_err(  fmt, ...)	log_level(LOG_ERR  , fmt, ##__VA_ARGS__)
 
-	__attribute__((weak)) int log_write(char * data, int len);
+	//! tx data throw uart/itm interface
+	int log_write(char * data, int len);
 
+	//! write implementation for printf
 	int _write(int file, char *ptr, int len);
 
-    void assert_attention();
+	//! called before entering in assert
+	void assert_attention();
+
+    //! assert implementation
 	void __assert_func( const char *filename, int line, const char *assert_func, const char *expr );
 
+	//! func, which analys hard fault and
 	void hard_fault_handler();
 
 	#if USE_SPEED_TEST == 1
+
+		//! start speed test
 		void speed_test_start();
+
+		//! stop speed test and output to the log
 		void speed_test_stop();
+
 	#endif
 
 #else
@@ -71,7 +83,9 @@ typedef enum {
 #endif
 
 #if USE_DELAY_US == 1
-	void delay_us(uint16_t);
+
+	void delay_us(uint16_t delay);
+
 #endif
 
 

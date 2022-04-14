@@ -1,7 +1,3 @@
-/*
- *      Author: Alekseev A.R.
- */
-
 #include "mcu_mod_rtos.h"
 
 #include "assert.h"
@@ -15,14 +11,17 @@
 #include "tim.h"
 
 volatile unsigned long ulHighFrequencyTimerTicks = 0;
+
 void configureTimerForRunTimeStats(void)
 {
+
 	#if defined RUNTIME_TIMER_HAL
 		HAL_TIM_Base_Start_IT(&RUNTIME_TIMER_HAL);
 	#elif defined RUNTIME_TIMER_LL
 		LL_TIM_EnableIT_UPDATE(RUNTIME_TIMER_LL);
 		LL_TIM_EnableCounter(RUNTIME_TIMER_LL);
 	#endif
+
 }
 
 unsigned long getRunTimeCounterValue(void)

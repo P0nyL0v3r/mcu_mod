@@ -1,7 +1,3 @@
-/*
- *      Author: Alekseev A.R.
- */
-
 #include <mcu_mod_log.h>
 #include "main.h"
 
@@ -25,6 +21,7 @@
 #endif
 
 #if USE_LOG == 1
+
 #include "string.h"
 #include "assert.h"
 #include "stdio.h"
@@ -38,11 +35,10 @@ static const char * log_level_string[] = {
 	TERM_RED "[ERR]"  TERM_RESET " "
 };
 
-static int inIRQ (void)
+inline int inIRQ (void)
 {
   return __get_IPSR() != 0;
 }
-
 
 #if USE_FREERTOS == 1
 
@@ -50,64 +46,75 @@ void log_lock();
 void log_unlock();
 int log_init();
 
-//для семафора
+//for semaphore init
 bool logInitState = false;
 static SemaphoreHandle_t log_mut;
 
 #if LOG_USE_STRM_BUF == 1
+
 void log_task(void * arg);
 
-//для кольцевого буфера
+//for ring buffer
 bool logUseStrmBuf = false;
 TaskHandle_t logTaskHandle;
 StreamBufferHandle_t logStrmBuf;
+
 #endif//#if LOG_USE_STRM_BUF == 1
 
 
 void log_lock() {
+
 	if(!inIRQ()){
-		if(!logInitState) {
+		if(!logInitState)
 			log_init();
-		}
-		xSemaphoreTakeRecursive(log_mut,portMAX_DELAY);
+		xSemaphoreTake(log_mut,portMAX_DELAY);
 	}
+
 }
 
 void log_unlock() {
+
 	if(!inIRQ()){
-		xSemaphoreGiveRecursive(log_mut);
+		xSemaphoreGive(log_mut);
 	}
+
 }
 
 int log_init() {
+
 	portENTER_CRITICAL();
 
-	if(logInitState)
-		return 0;
+	if(!logInitState) {
+		log_mut = xSemaphoreCreateMutex();
 
-	log_mut = xSemaphoreCreateRecursiveMutex();
-#if LOG_USE_STRM_BUF == 1
-	xTaskCreate(log_task, (char *)"[LOG]", configMINIMAL_STACK_SIZE,
-			NULL, rtosPriorityLow, &logTaskHandle);
-#endif
-	logInitState = true;
+	#if LOG_USE_STRM_BUF == 1
+		xTaskCreate(log_task, (char *)"[LOG]", LOG_TASK_STACK_SIZE,
+				NULL, LOG_TASK_PRIORITY, &logTaskHandle);
+	#endif
+
+		logInitState = true;
+	}
 
 	portEXIT_CRITICAL();
+
 	return 0;
 }
 
 #if LOG_USE_STRM_BUF == 1
 
 void log_task(void * arg) {
+
 	logStrmBuf = xStreamBufferCreate(LOG_STRM_BUF_SIZE,1);
 	logUseStrmBuf = true;
-	const int bufSize = 256;
+	const int bufSize = LOG_TASK_STACK_SIZE * 2;
 	char buf[bufSize];
 	size_t size;
+
 	for(;;) {
 		size = xStreamBufferReceive(logStrmBuf, buf, bufSize, portMAX_DELAY);
 		log_write(buf,size);
 	}
+
 }
 
 #endif//#if LOG_USE_STRM_BUF == 1
@@ -190,17 +197,21 @@ int log_write(char * data, int len) {
 
 int _write(int file, char *ptr, int len)	{
 	int stat = 0;
+
 #if LOG_USE_STRM_BUF == 1
 	if(logUseStrmBuf && !inIRQ())
 		stat = xStreamBufferSend( logStrmBuf, ptr, len, portMAX_DELAY );
 	else
 #endif
-		stat = log_write( ptr,len );
+
+	stat = log_write( ptr,len );
 	return stat;
 }
 
 #if USE_SPEED_TEST == 1
+
 	void speed_test_start() {
+
 		log_debug("speed test start");
 		//https://stackoverflow.com/questions/36378280/stm32-how-to-enable-dwt-cycle-counter
 		CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;//enable trace
@@ -212,7 +223,9 @@ int _write(int file, char *ptr, int len)	{
 		DWT->CTRL = DWT_CTRL_CYCCNTENA_Msk;//enable DWT cycle counter
 
 	}
+
 	void speed_test_stop() {
+
 		uint32_t clk = DWT->CYCCNT;
 		uint32_t us = clk/(SystemCoreClock/1000000);
 		uint32_t ms = us/1000;
@@ -231,14 +244,19 @@ int _write(int file, char *ptr, int len)	{
 			val = ms;
 		}
 		log_debug("speed:%lu %s",val,suf);
+
 	}
+
 #endif//#if USE_SPEED_TEST == 1
 
-__weak void assert_attention() {
+__attribute__((weak)) void assert_attention() {
+
 	log_err("attention");
+
 }
 
 void __assert_func( const char *filename, int line, const char *assert_func, const char *expr ) {
+
 	//привлекаем внимание
 	assert_attention();
 	__disable_irq();//отключаем прерывания, что бы ничего не вызывалось
@@ -260,9 +278,11 @@ void __assert_func( const char *filename, int line, const char *assert_func, con
 			j++;
 		}
 	}
+
 }
 
 void usage_fault_handler(uint32_t CFSRValue) {
+
 	char * type;
    //CFSRValue >>= 16;                  // right shift to lsb
    if((CFSRValue & (1 << SCB_CFSR_DIVBYZERO_Pos)) != 0) {
@@ -286,9 +306,11 @@ void usage_fault_handler(uint32_t CFSRValue) {
 	   type = (char*)"undefined";
    }
    log_err("Usage fault: %s",type);
+
 }
 
 void bus_fault_handler(uint32_t CFSRValue) {
+
 	char * type;
    //CFSRValue >>= 8;                  // right shift to lsb
    if((CFSRValue & (1 << SCB_CFSR_IMPRECISERR_Pos)) != 0) {
@@ -303,9 +325,11 @@ void bus_fault_handler(uint32_t CFSRValue) {
 	   type = (char*)"undefined";
    }
    log_err("Bus fault: %s",type);
+
 }
 
 void mem_fault_handler(uint32_t CFSRValue) {
+
 	char * type;
    //CFSRValue >>= 0;                  // right shift to lsb
    if((CFSRValue & (1 << SCB_CFSR_DACCVIOL_Pos)) != 0) {
@@ -317,9 +341,11 @@ void mem_fault_handler(uint32_t CFSRValue) {
 	   type = (char*)"undefined";
    }
    log_err("Memory management fault: %s",type);
+
 }
 
 void hard_fault_handler() {
+
 	//https://blog.feabhas.com/2013/02/developing-a-generic-hard-fault-handler-for-arm-cortex-m3cortex-m4/
 	log_err("In Hard Fault Handler");
 	log_err("SCB->HFSR = 0x%08lX", (uint32_t)SCB->HFSR);
@@ -336,11 +362,15 @@ void hard_fault_handler() {
 		mem_fault_handler(SCB->CFSR);
 	}
 	assert("hard fault");
+
 }
+
 #endif//#if USE_LOG == 1
 
 #if USE_DELAY_US == 1
+
 void delay_us(uint16_t delay) {
+
 	#if !defined(TIM_US) && defined(DWT)
 		uint32_t tickstart = DWT->CYCCNT;
 		static uint32_t us_tick = SystemCoreClock / 1000000;
@@ -362,7 +392,9 @@ void delay_us(uint16_t delay) {
 	#else
 		#error "must to define us timer"
 	#endif
+
 }
+
 #endif
 
 

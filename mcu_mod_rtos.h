@@ -1,13 +1,9 @@
-/*
- *      Author: Alekseev A.R.
- */
-
 #ifndef MCU_MOD_MCU_MOD_RTOS_H_
 #define MCU_MOD_MCU_MOD_RTOS_H_
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif//#ifdef __cplusplus
 
 #include "mcu_mod.h"
 #include "mcu_mod_conf.h"
@@ -26,7 +22,7 @@ extern "C" {
 	extern volatile unsigned long ulHighFrequencyTimerTicks;
 #endif
 
-//heap wrapper
+	//heap wrapper
 	void __wrap_free( void* p);
 	void * __wrap_malloc( size_t xSize );
 	void * __wrap_realloc(void * ptr, size_t size);
@@ -41,10 +37,10 @@ extern "C" {
 	  rtosPriorityRealtime     = configMAX_PRIORITIES -1,   ///< priority: realtime (highest)
 	}rtosPriority_t;
 
-#endif
+#endif//#if USE_FREERTOS == 1
 
 #ifdef __cplusplus
 }
-#endif
+#endif//#ifdef __cplusplus
 
 #endif /* MCU_MOD_MCU_MOD_RTOS_H_ */

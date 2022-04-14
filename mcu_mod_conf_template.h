@@ -1,8 +1,3 @@
-/*
- * mcu_mod_conf.h
- *      Author: Alekseev Aleksei
- * Description:
- */
 #ifndef MCU_MOD_CONF_H_
 #define MCU_MOD_CONF_H_
 
@@ -12,26 +7,37 @@
 #define		USE_LOG			0
 
 #if USE_LOG == 1
-#define 	LOG_MIN_LEVEL   LOG_DEBUG
-#define 	LOG_EL			"\r\n"
 
-#define		LOG_USE_STRM_BUF 	0
-#define 	LOG_STRM_BUF_SIZE	256
+#define 	LOG_MIN_LEVEL   LOG_DEBUG	//!< minimal log level for
+#define 	LOG_EL			"\r\n"		//!< endline code in end of string
 
-#define 	LOG_USE_ITM		0
+#define		LOG_USE_STRM_BUF 	0		//!< use ring buffer
+
+#if LOG_USE_STRM_BUF == 1
+
+#define 	LOG_STRM_BUF_SIZE	256							//!< ring buffer size
+#define 	LOG_TASK_PRIORITY	rtosPriorityLow				//!< task priority to process ring buffer
+#define 	LOG_TASK_STACK_SIZE configMINIMAL_STACK_SIZE	//!< task stack size to process ring buffer
+
+#endif
+
+#define 	LOG_USE_ITM		0			//!< use ITM interface for log output
 
 //#define 	LOG_UART		USART1
 
 //use code execution speed test
-#define		USE_SPEED_TEST	0
+#define		USE_SPEED_TEST	0			//!< speed test
+
 #endif//#if USE_LOG == 1
 
-//us delay
-#define		USE_DELAY_US	0
+
+#define		USE_DELAY_US	0			//!< us delay
 
 #if USE_DELAY_US == 1
+
 //#define TIM_US	TIM1
-#endif
+
+#endif//#if USE_DELAY_US == 1
 
 
 // use rtos
@@ -44,7 +50,8 @@
 #define		USE_FREERTOS	0
 
 #if USE_FREERTOS == 1
-	#include "FreeRTOSConfig.h"
+
+#include "FreeRTOSConfig.h"
 
 //run time stat
 // what to do:
@@ -96,6 +103,7 @@
 //	* set in FreeRTOSConfig.h:
 //		#define configUSE_MALLOC_FAILED_HOOK            1
 //	*	define void vApplicationMallocFailedHook(void) {}
+
 #endif//#if USE_FREERTOS == 1
 
 #endif /*MCU_MOD_CONF_H_*/
