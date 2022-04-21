@@ -12,78 +12,87 @@
 
 volatile unsigned long ulHighFrequencyTimerTicks = 0;
 
-void configureTimerForRunTimeStats(void)
+void configureTimerForRunTimeStats( void )
 {
-
-	#if defined RUNTIME_TIMER_HAL
-		HAL_TIM_Base_Start_IT(&RUNTIME_TIMER_HAL);
-	#elif defined RUNTIME_TIMER_LL
-		LL_TIM_EnableIT_UPDATE(RUNTIME_TIMER_LL);
-		LL_TIM_EnableCounter(RUNTIME_TIMER_LL);
-	#endif
-
+#if defined RUNTIME_TIMER_HAL
+  HAL_TIM_Base_Start_IT( &RUNTIME_TIMER_HAL );
+#elif defined RUNTIME_TIMER_LL
+  LL_TIM_EnableIT_UPDATE( RUNTIME_TIMER_LL );
+  LL_TIM_EnableCounter( RUNTIME_TIMER_LL );
+#endif
 }
 
-unsigned long getRunTimeCounterValue(void)
+unsigned long getRunTimeCounterValue( void )
 {
-	return ulHighFrequencyTimerTicks;
+  return ulHighFrequencyTimerTicks;
 }
 
 #endif
 
 #ifdef __cplusplus
 
-void* operator new(size_t sz) {
-	return pvPortMalloc(sz);
+void * operator new( size_t sz )
+{
+  return pvPortMalloc( sz );
 }
 
-void* operator new[](size_t sz) {
-	return pvPortMalloc(sz);
+void * operator new[]( size_t sz )
+{
+  return pvPortMalloc( sz );
 }
 
-void operator delete(void* p) {
-	vPortFree(p);
+void operator delete( void * p )
+{
+  vPortFree( p );
 }
 
-void operator delete[](void* p) {
-	vPortFree(p);
+void operator delete[]( void * p )
+{
+  vPortFree( p );
 }
 
-void* operator new(size_t size, void* p) {
-	 assert(0);
-	(void)size;
-	return p;
+void * operator new( size_t size, void * p )
+{
+  assert( 0 );
+  (void)size;
+  return p;
 }
 
-void* operator new[](size_t size, void* p) {
-	assert(0);
-	(void)size;
-	return p;
+void * operator new[]( size_t size, void * p )
+{
+  assert( 0 );
+  (void)size;
+  return p;
 }
 
-void operator delete(void*, void*) {
-	assert(0);
+void operator delete( void * , void * )
+{
+  assert( 0 );
 }
 
-void operator delete[](void*, void*) {
-	assert(0);
+void operator delete[]( void * , void * )
+{
+  assert( 0 );
 }
 
 #endif
 
-void * __wrap_malloc( size_t xSize ) {
-	return pvPortMalloc( xSize );
+void* __wrap_malloc( size_t xSize )
+{
+  return pvPortMalloc( xSize );
 }
 
-void __wrap_free( void* p) {
-	vPortFree(p);
+void __wrap_free( void * p )
+{
+  vPortFree( p );
 }
 
-void * __wrap_realloc(void * ptr, size_t size) {
-	void * new_ptr = pvPortMalloc(size);
-	memcpy(new_ptr,ptr,size);
-	vPortFree(ptr);
-	return new_ptr;
+void* __wrap_realloc( void * ptr, size_t size )
+{
+  void * new_ptr = pvPortMalloc( size );
+  memcpy( new_ptr, ptr, size );
+  vPortFree( ptr );
+  return new_ptr;
 }
 
 #endif

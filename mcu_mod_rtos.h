@@ -19,23 +19,24 @@ extern "C" {
 
 //runtime counter
 #if configGENERATE_RUN_TIME_STATS == 1
-	extern volatile unsigned long ulHighFrequencyTimerTicks;
+  extern volatile unsigned long ulHighFrequencyTimerTicks;
 #endif
 
-	//heap wrapper
-	void __wrap_free( void* p);
-	void * __wrap_malloc( size_t xSize );
-	void * __wrap_realloc(void * ptr, size_t size);
+//heap wrapper
+void __wrap_free( void * p );
+void* __wrap_malloc( size_t xSize );
+void* __wrap_realloc( void * ptr, size_t size );
 
-	typedef enum {
-	  rtosPriorityIdle         = tskIDLE_PRIORITY,          ///< priority: idle (lowest)
-	  rtosPriorityLow          ,        					///< priority: low
-	  rtosPriorityBelowNormal  ,         					///< priority: below normal
-	  rtosPriorityNormal       ,          					///< priority: normal (default)
-	  rtosPriorityAboveNormal  ,          					///< priority: above normal
-	  rtosPriorityHigh         ,          					///< priority: high
-	  rtosPriorityRealtime     = configMAX_PRIORITIES -1,   ///< priority: realtime (highest)
-	}rtosPriority_t;
+typedef enum
+{
+  rtosPriorityIdle = tskIDLE_PRIORITY,            ///< priority: idle (lowest)
+  rtosPriorityLow,        					              ///< priority: low
+  rtosPriorityBelowNormal,         					      ///< priority: below normal
+  rtosPriorityNormal,          					          ///< priority: normal (default)
+  rtosPriorityAboveNormal,          					    ///< priority: above normal
+  rtosPriorityHigh,          					            ///< priority: high
+  rtosPriorityRealtime = configMAX_PRIORITIES - 1,///< priority: realtime (highest)
+} rtosPriority_t;
 
 #endif//#if USE_FREERTOS == 1
 
