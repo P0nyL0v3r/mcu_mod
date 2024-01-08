@@ -1,6 +1,9 @@
 #ifndef MCU_MOD_CONF_H_
 #define MCU_MOD_CONF_H_
 
+//bcd version
+#define 	MCU_MOD			0x10
+
 //use debug
 //what to do:
 //	*	define log interface
